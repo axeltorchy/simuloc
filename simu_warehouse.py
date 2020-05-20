@@ -16,7 +16,7 @@ from random import sample, seed
 from itertools import combinations
 
 matplotlib.rcParams['figure.dpi'] = 150
-size_factor = 2
+size_factor = 1.2
 matplotlib.rcParams['figure.figsize'] = [size_factor * 8.0, size_factor * 6.0]
 matplotlib.rcParams['lines.markersize'] = 6.0 
 
@@ -26,15 +26,12 @@ np.random.seed(0)
 seed(0)
 
 # Simulation parameters
-N_x         = 6         # number of anchors on a row
-N_y         = 6         # number of anchors on a column
-d           = 80        # grid periodicity
 default_z   = 2         # default anchor altitude
 min_z       = 1.
 max_z       = 4.
-ranging_dst = 160
-noise_std   = 0.08      # standard deviation gaussian noise rangings
-noise_mean  = -0.00     # mean gaussian noise rangings
+ranging_dst = 15
+noise_std   = 0.30      # standard deviation gaussian noise rangings
+noise_mean  = 0.00     # mean gaussian noise rangings
 
 # If True, altitude will be chosen randomly, uniformly between min_z and max_z
 random_z  = True
@@ -56,15 +53,11 @@ def ranging(tag_pos, anchors, ranging_dst):
     ID = []
     for i in anchors:
         a = anchors[i]
-        x = a['x']
-        y = a['y']
-        z = a['z']
-        anchor = np.array([x,y,z])
-        dst = np.linalg.norm(anchor - tag_pos)
-        # print("Distance to anchor "+str(i)+" = " + str(dst))
-        if dst <= ranging_dst:
+        sqdst = (a['x'] - tag_pos[0])**2 + (a['y'] - tag_pos[1])**2 + (a['z'] - tag_pos[2])**2
+        if sqdst <= ranging_dst**2:
             ID.append(i)
     return np.array(ID)
+
 
 
 def cost_function(point, anchors, weight_method, constrained_alt):
@@ -219,7 +212,7 @@ def volume_tetrahedron(vertices):
     return 1/6 * abs((a-d).dot(np.cross(b-d,c-d)))
 
 
-def anchor_selection_det_covariance(anchors, N, N_tries=100):
+def anchor_selection_det_covariance(anchors, N, N_tries=100, cov_3D=True):
     """Returns N anchors that maximize the determinant of the covariance
     matrix. If N_tries = 0, the function goes through all N_anchors choose N
     combinations."""
@@ -227,7 +220,7 @@ def anchor_selection_det_covariance(anchors, N, N_tries=100):
     covariance = 0
     selected_anchors = None
     ID_selected = None
-    vertices = np.zeros((N,3))
+    vertices = np.zeros((N,3)) if cov_3D else np.zeros((N,2))
     
     if N_tries == 0:
         # Return list of tuples containing the IDs of the anchors of the
@@ -237,7 +230,8 @@ def anchor_selection_det_covariance(anchors, N, N_tries=100):
             for i in range(len(c)):
                 vertices[i][0] = anchors[c[i]]['x']
                 vertices[i][1] = anchors[c[i]]['y']
-                vertices[i][2] = anchors[c[i]]['z']
+                if cov_3D:
+                    vertices[i][2] = anchors[c[i]]['z']
                 
                 
             # print(vertices)
@@ -402,7 +396,8 @@ def anchors_from_IDs(anchors, ID, tag_pos):
         err = np.random.normal(noise_mean, noise_std)
         distances[i] = np.linalg.norm(anchor - tag_pos) + err
         errors[i] = err
-        a['dst'] = distances[i]
+        # a['dst'] = distances[i]
+        a['dst'] = np.round(100*distances[i])/100
         selected_anchors[i] = a
     return selected_anchors, distances, errors
 
@@ -422,7 +417,7 @@ def normal_density(anchors, x, y, z, sigma):
 
 
 anchors = {}
-initialize_anchors(anchors, N_x, N_y, d, min_z, max_z, random_z)
+# initialize_anchors(anchors, N_x, N_y, d, min_z, max_z, random_z)
 
 def xy_to_ij(x,y):
     """Returns the coordinates on the warehouse picture."""
@@ -439,29 +434,32 @@ def ij_to_xy(i,j):
 # 18 anchors cover a surface of more than 500 square meters
 anchors_locations = [
     [0 ,5.12, 3],     # 0
-    [0, 12, 3],         # 1
+    [0, 10, 3],         # 1
     [0, 25.31, 3],         # 2
-    [7.35, 12, 3],       # 3
-    [7.35, 25.31, 3],      # 4
+    [7.35, 10, 3],       # 3
+    [7.2, 25.31, 3],      # 4
     [7.35, 5.12, 3],      # 5
     [10.08, 25.31, 3],  # 6
     [21, 25.31, 3],     # 7
     [24.2, 21, 3],      # 8
-    [10, 5.12, 3],      # 9
+    [10.5, 5.12, 3],      # 9
     [19, 5.12, 3],      # 10
     [24, 6.9, 3],       # 11
     [27.5, 17, 3],      # 12
     [30.7, 11.9, 3],     # 13
     [14.9, 14.4, 3],     # 14
     [21.6, 13.9, 3],     # 15
-    [0, 19, 3],     # 16
-    [7.35, 19, 3]     # 17
+    [0, 21, 3],     # 16
+    [7.2, 21, 3],     # 17
+    [0, 15.5, 3],     # 18
+    [7.2, 15.5, 3]     # 19
     ]
 
 # if __name__ == "__main__":
 print("Start Warehouse simulation.")
 warehouse = plt.imread("warehouse.png")
 f1 = plt.imshow(warehouse)
+plt.title("Warehouse - anchor positions (2D)")
 f1.axes.get_xaxis().set_visible(False)
 f1.axes.get_yaxis().set_visible(False)
 for i in range(len(anchors_locations)):
@@ -478,3 +476,195 @@ for i in range(len(anchors_locations)):
     labels = np.arange(-2, 29, 2)
     locs = 2058 - labels * 1994 / 25.32
     plt.yticks(locs, labels)
+    
+plt.show()
+
+
+# Possible tag positions to be localized
+
+x_tag = np.arange(0.2, 7.1, 0.2)
+y_tag = np.arange(5.2, 25.2, 0.2)
+
+#X,Y = np.meshgrid(x_tag, y_tag)
+#pos = xy_to_ij(X, Y)
+
+#plt.scatter(pos[0], pos[1], marker="+", color="blue", alpha=0.5, s=10)
+    
+
+anchors = {}
+for i in range(len(anchors_locations)):
+    anchors_locations[i][2] = 0 + np.random.rand() * 6
+    anchors[i] = {'x': anchors_locations[i][0],
+                  'y': anchors_locations[i][1],
+                  'z': anchors_locations[i][2]}
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
+
+bnds = ((None, None), (None, None), (0, 3))
+tolerance = 1e-7
+
+SSE = {"det_covariance":    0,
+       "variance_z":        0,
+       "random":            0,
+       "nearest":           0
+       }
+
+SSE_XY = {"det_covariance": 0,
+          "variance_z":     0,
+          "random":         0,
+          "nearest":        0
+          }
+
+errors_rec = {"det_covariance": [],
+       "variance_z":        [],
+       "random":            [],
+       "nearest":           []
+       }
+
+errors_rec_XY = {"det_covariance": [],
+       "variance_z":        [],
+       "random":            [],
+       "nearest":           []
+       }
+
+
+count_iterations = 0
+
+sum_d = 0
+
+for i in range(len(x_tag)):
+    if i%10 == 0:
+        print("x =",x_tag[i])
+    for j in range(len(y_tag)):
+        x = x_tag[i]
+        y = y_tag[j]
+        z = 2.
+        tag_pos = np.array([x, y, z])
+        
+        #print("(x , y) = (%f , %f)" % (x, y))
+        ID = ranging(tag_pos, anchors, ranging_dst)
+        
+        distances = np.array([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])
+        #ID = np.random.choice(ID, min(len(ID), 8), replace=False)
+        ID = np.random.choice(ID, min(len(ID), 8), replace=False, p=(1./distances) /sum(1./distances))
+        
+        sum_d += sum([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])/len(ID)
+        
+        selected_anchors, distances, errors = anchors_from_IDs(anchors, ID, tag_pos)
+        
+        # pp.pprint(selected_anchors)
+        
+        # Initial guess = barycenter
+        initial_guess = np.sum([anchors_locations[i] for i in ID], axis=0)/len(ID)
+
+        anc = anchor_selection_variance_z(selected_anchors, 4)
+        res = minimize(cost_function,
+                       initial_guess,
+                       args=(anc, 0, 0),
+                       method='L-BFGS-B',
+                       bounds=bnds,
+                       tol=tolerance,
+                       jac=gradient_cost_function,
+                       options={'disp': False})
+        
+        SSE['variance_z'] += np.sum((res.x - tag_pos)**2)
+        SSE_XY['variance_z'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+        errors_rec['variance_z'].append(np.sum((res.x - tag_pos)**2))
+        errors_rec_XY['variance_z'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+        
+        anc = anchor_selection_random(selected_anchors, 4)
+        res = minimize(cost_function,
+                       initial_guess,
+                       args=(anc, 0, 0),
+                       method='L-BFGS-B',
+                       bounds=bnds,
+                       tol=tolerance,
+                       jac=gradient_cost_function,
+                       options={'disp': False})
+        
+        SSE['random'] += np.sum((res.x - tag_pos)**2)
+        SSE_XY['random'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+        errors_rec['random'].append(np.sum((res.x - tag_pos)**2))
+        errors_rec_XY['random'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+        
+        
+        anc = anchor_selection_det_covariance(selected_anchors, 4, 0, True)
+        res = minimize(cost_function,
+                       initial_guess,
+                       args=(anc, 0, 0),
+                       method='L-BFGS-B',
+                       bounds=bnds,
+                       tol=tolerance,
+                       jac=gradient_cost_function,
+                       options={'disp': False})
+        
+        SSE['det_covariance'] += np.sum((res.x - tag_pos)**2)
+        SSE_XY['det_covariance'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+        errors_rec['det_covariance'].append(np.sum((res.x - tag_pos)**2))
+        errors_rec_XY['det_covariance'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+        
+        
+        anc = anchor_selection_nearest(selected_anchors, 4)
+        res = minimize(cost_function,
+                       initial_guess,
+                       args=(anc, 0, 0),
+                       method='L-BFGS-B',
+                       bounds=bnds,
+                       tol=tolerance,
+                       jac=gradient_cost_function,
+                       options={'disp': False})
+        
+        SSE['nearest'] += np.sum((res.x - tag_pos)**2)
+        SSE_XY['nearest'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+        errors_rec['nearest'].append(np.sum((res.x - tag_pos)**2))
+        errors_rec_XY['nearest'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+        
+        
+        count_iterations += 1
+
+print("\tMean tag-anchor distance:",sum_d/count_iterations)
+print("")
+
+fignb = 0
+
+for l in ["det_covariance", "variance_z", "random", "nearest"]:
+    print("== %s" % l)
+    print("\t3D:")
+    print("\t  Sum of Squared Errors (SSE):", SSE[l])
+    print("\t  Mean Squared Error (MSE):", SSE[l]/count_iterations)
+    print("\t  Median Squared Error:",np.median(errors_rec[l]))
+    print("\t  Max / Min of Squared Error:",np.max(errors_rec[l]),",",np.min(errors_rec[l]))
+    
+    print("\t2D:")
+    print("\t  Sum of XY Squared Errors (SSE)", SSE_XY[l])
+    print("\t  XY Mean Squared Error (MSE)", SSE_XY[l]/count_iterations)
+    print("\t  Median Squared Error:",np.median(errors_rec_XY[l]))
+    print("\t  Max / Min of Squared Error:",np.max(errors_rec_XY[l]),",",np.min(errors_rec_XY[l]))
+    
+    
+    plt.figure(0)
+    values, base = np.histogram(errors_rec_XY[l], bins=5000)
+    cumulative = np.cumsum(values)
+    plt.plot(base[:-1], cumulative/count_iterations, label=l)
+    plt.figure(1)
+    values, base = np.histogram(np.sqrt(errors_rec_XY[l]), bins=5000)
+    cumulative = np.cumsum(values)
+    plt.plot(base[:-1], cumulative/count_iterations, label=l)
+    
+
+plt.figure(0)
+plt.xlim(0,3)
+plt.ylim(0,1)
+plt.xlabel("Absolute Error in the XY plane ($m^2$)")
+plt.ylabel("Cumulative proportion")
+plt.title("Cumulative distribution functions")
+plt.legend()
+    
+plt.figure(1)
+plt.xlim(0,3)
+plt.ylim(0,1)
+plt.xlabel("Squared Error in the XY plane ($m^2$)")
+plt.ylabel("Cumulative proportion")
+plt.title("Cumulative distribution functions")
+plt.legend()
+plt.show()

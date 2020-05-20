@@ -436,14 +436,14 @@ def ij_to_xy(i,j):
     return ((i-65)*conv_factor, (2058 - j)*conv_factor)
     
 
-# 16 anchors cover a surface of more than 500 square meters
+# 18 anchors cover a surface of more than 500 square meters
 anchors_locations = [
-    [3.2 ,5.12, 3],     # 0
-    [0, 10, 3],         # 1
-    [0, 20, 3],         # 2
-    [7.35,10, 3],       # 3
-    [7.35, 20, 3],      # 4
-    [3, 25.31, 3],      # 5
+    [0 ,5.12, 3],     # 0
+    [0, 12, 3],         # 1
+    [0, 25.31, 3],         # 2
+    [7.35, 12, 3],       # 3
+    [7.35, 25.31, 3],      # 4
+    [7.35, 5.12, 3],      # 5
     [10.08, 25.31, 3],  # 6
     [21, 25.31, 3],     # 7
     [24.2, 21, 3],      # 8
@@ -453,7 +453,9 @@ anchors_locations = [
     [27.5, 17, 3],      # 12
     [30.7, 11.9, 3],     # 13
     [14.9, 14.4, 3],     # 14
-    [21.6, 13.9, 3]     # 15
+    [21.6, 13.9, 3],     # 15
+    [0, 19, 3],     # 16
+    [7.35, 19, 3]     # 17
     ]
 
 # if __name__ == "__main__":
@@ -470,3 +472,9 @@ for i in range(len(anchors_locations)):
     f2 = plt.scatter(pos[0], pos[1], color="red", marker="D", s=60)
     plt.annotate("A %d" % i, (pos[0], pos[1]), textcoords="offset points",
                  xytext=(0,7), ha='center', color="red")
+    labels = np.arange(-2, 33, 2)
+    locs = labels * 1994 / 25.32 + 65
+    plt.xticks(locs, labels)
+    labels = np.arange(-2, 29, 2)
+    locs = 2058 - labels * 1994 / 25.32
+    plt.yticks(locs, labels)

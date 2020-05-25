@@ -27,11 +27,11 @@ seed(0)
 
 # Simulation parameters
 default_z   = 2         # default anchor altitude
-min_z       = 1.
-max_z       = 4.
-ranging_dst = 25
-noise_std   = 0.15      # standard deviation gaussian noise rangings
-noise_mean  = 0.05     # mean gaussian noise rangings
+min_z       = 3.
+max_z       = 6.
+ranging_dst = 20
+noise_std   = 0.25      # standard deviation gaussian noise rangings
+noise_mean  = 0.08     # mean gaussian noise rangings
 
 # If True, altitude will be chosen randomly, uniformly between min_z and max_z
 random_z  = True
@@ -485,6 +485,11 @@ plt.show()
 x_tag = np.arange(0.2, 7.1, 0.4)
 y_tag = np.arange(5.2, 25.2, 0.4)
 
+x_tag = np.arange(0.2, 30.1, 0.5)
+y_tag = np.arange(5.2, 25.2, 0.5)
+z_tag = np.arange(0.2, 2.1, 0.4)
+
+
 #X,Y = np.meshgrid(x_tag, y_tag)
 #pos = xy_to_ij(X, Y)
 
@@ -502,7 +507,7 @@ for i in range(len(anchors_locations)):
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
-bnds = ((None, None), (None, None), (0, 3))
+bnds = ((None, None), (None, None), (1.5, 2.5))
 bnds = ((None, None), (None, None), (None, None))
 tolerance = 1e-7
 
@@ -535,11 +540,32 @@ errors_rec_XY = {"det_covariance_2D": [],
                  }
 
 
+errors_rec_cor_z = {"det_covariance_2D": [],
+              "det_covariance_3D": [],
+              "variance_z":        [],
+              "random":            [],
+              "nearest":           []
+              }
+
+SSE_cor_z = {"det_covariance_2D":    0,
+       "det_covariance_3D":    0,
+       "variance_z":        0,
+       "random":            0,
+       "nearest":           0
+       }
+
+
 count_iterations = 0
 
 sum_d = 0
 
 z_guess = {"det_covariance_2D": [],
+                 "det_covariance_3D": [],
+                 "variance_z":        [],
+                 "random":            [],
+                 "nearest":           []
+                 }
+z_guess_cor = {"det_covariance_2D": [],
                  "det_covariance_3D": [],
                  "variance_z":        [],
                  "random":            [],
@@ -551,135 +577,200 @@ for i in range(len(x_tag)):
     if i%10 == 0:
         print("x =",x_tag[i])
     for j in range(len(y_tag)):
-        x = x_tag[i]
-        y = y_tag[j]
-        z = 2.5
-        tag_pos = np.array([x, y, z])
-        
-        #print("(x , y) = (%f , %f)" % (x, y))
-        ID = ranging(tag_pos, anchors, ranging_dst)
-        
-        distances = np.array([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])
-        #ID = np.random.choice(ID, min(len(ID), 8), replace=False)
-        ID = np.random.choice(ID, min(len(ID), 8), replace=False, p=(1./distances) /sum(1./distances))
-        
-        sum_d += sum([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])/len(ID)
-        
-        selected_anchors, distances, errors = anchors_from_IDs(anchors, ID, tag_pos)
-        
-        # pp.pprint(selected_anchors)
-        
-        # Initial guess = barycenter
-        initial_guess = np.sum([anchors_locations[i] for i in ID], axis=0)/len(ID)
-
-        anc = anchor_selection_variance_z(selected_anchors, 4)
-        res = minimize(cost_function,
-                       initial_guess,
-                       args=(anc, 0, 0),
-                       method='L-BFGS-B',
-                       bounds=bnds,
-                       tol=tolerance,
-                       jac=gradient_cost_function,
-                       options={'disp': False})
-        
-        z_guess['variance_z'].append(res.x[2])
-        
-        SSE['variance_z'] += np.sum((res.x - tag_pos)**2)
-        SSE_XY['variance_z'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
-        errors_rec['variance_z'].append(np.sum((res.x - tag_pos)**2))
-        errors_rec_XY['variance_z'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
-        
-        
-        
-        
-        
-        anc = anchor_selection_random(selected_anchors, 4)
-        res = minimize(cost_function,
-                       initial_guess,
-                       args=(anc, 0, 0),
-                       method='L-BFGS-B',
-                       bounds=bnds,
-                       tol=tolerance,
-                       jac=gradient_cost_function,
-                       options={'disp': False})
-        
-        z_guess['random'].append(res.x[2])
-        
-        SSE['random'] += np.sum((res.x - tag_pos)**2)
-        SSE_XY['random'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
-        errors_rec['random'].append(np.sum((res.x - tag_pos)**2))
-        errors_rec_XY['random'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
-        
-        
-        
-        
-        
-        anc = anchor_selection_det_covariance(selected_anchors, 4, 0, True)
-        res = minimize(cost_function,
-                       initial_guess,
-                       args=(anc, 0, 0),
-                       method='L-BFGS-B',
-                       bounds=bnds,
-                       tol=tolerance,
-                       jac=gradient_cost_function,
-                       options={'disp': False})
-        
-        z_guess['det_covariance_3D'].append(res.x[2])
-        
-        SSE['det_covariance_3D'] += np.sum((res.x - tag_pos)**2)
-        SSE_XY['det_covariance_3D'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
-        errors_rec['det_covariance_3D'].append(np.sum((res.x - tag_pos)**2))
-        errors_rec_XY['det_covariance_3D'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
-        
-        
-        
-        
-        anc = anchor_selection_det_covariance(selected_anchors, 4, 0, False)
-        res = minimize(cost_function,
-                       initial_guess,
-                       args=(anc, 0, 0),
-                       method='L-BFGS-B',
-                       bounds=bnds,
-                       tol=tolerance,
-                       jac=gradient_cost_function,
-                       options={'disp': False})
-        
-        z_guess['det_covariance_2D'].append(res.x[2])
-        
-        SSE['det_covariance_2D'] += np.sum((res.x - tag_pos)**2)
-        SSE_XY['det_covariance_2D'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
-        errors_rec['det_covariance_2D'].append(np.sum((res.x - tag_pos)**2))
-        errors_rec_XY['det_covariance_2D'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
-        
-        
-        
-        
-        
-        anc = anchor_selection_nearest(selected_anchors, 4)
-        res = minimize(cost_function,
-                       initial_guess,
-                       args=(anc, 0, 0),
-                       method='L-BFGS-B',
-                       bounds=bnds,
-                       tol=tolerance,
-                       jac=gradient_cost_function,
-                       options={'disp': False})
-        
-        z_guess['nearest'].append(res.x[2])
-        
-        SSE['nearest'] += np.sum((res.x - tag_pos)**2)
-        SSE_XY['nearest'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
-        errors_rec['nearest'].append(np.sum((res.x - tag_pos)**2))
-        errors_rec_XY['nearest'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
-        
-        
-        count_iterations += 1
+        for k in range(len(z_tag)):
+            
+            # arithmetic / weighted mean z coordinate
+            def arithmetic_mean(anc, res_xyz):
+                # res_xyz = res.x from minimization function
+                z_sum = 0
+                z_rk_sum = 0
+                rk_sum = 0
+                z_count = 0
+                x, y = res_xyz[0], res_xyz[1]
+                for a in anc:
+                    x_i = anc[a]['x']
+                    y_i = anc[a]['y']
+                    z_i = anc[a]['z']
+                    dst = anc[a]['dst']
+                    
+                    # complex square root, retain modulus
+                    delta_z_k = np.real( np.sqrt( dst**2 - (x - x_i)**2 - (y - y_i)**2 + 0j) )
+                    
+                    # anchor is considered to be always above tag 
+                    z_sum += z_i - delta_z_k
+                    z_rk_sum += (z_i - delta_z_k)/dst
+                    z_count += 1
+                    rk_sum += 1. / dst
+                
+                z = z_sum / z_count
+                z = z_rk_sum / rk_sum
+                return np.array([x, y, z])
+            
+            x = x_tag[i]
+            y = y_tag[j]
+            z = 1.6
+            z = z_tag[k]
+            tag_pos = np.array([x, y, z])
+            
+            #print("(x , y) = (%f , %f)" % (x, y))
+            ID = ranging(tag_pos, anchors, ranging_dst)
+            
+            distances = np.array([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])
+            #ID = np.random.choice(ID, min(len(ID), 8), replace=False)
+            ID = np.random.choice(ID, min(len(ID), 8), replace=False, p=(1./distances) /sum(1./distances))
+            
+            sum_d += sum([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])/len(ID)
+            
+            selected_anchors, distances, errors = anchors_from_IDs(anchors, ID, tag_pos)
+            
+            # pp.pprint(selected_anchors)
+            
+            # Initial guess = barycenter
+            initial_guess = np.sum([anchors_locations[i] for i in ID], axis=0)/len(ID)
+    
+            anc = anchor_selection_variance_z(selected_anchors, 4)
+            res = minimize(cost_function,
+                           initial_guess,
+                           args=(anc, 0, 0),
+                           method='L-BFGS-B',
+                           bounds=bnds,
+                           tol=tolerance,
+                           jac=gradient_cost_function,
+                           options={'disp': False})
+            
+            z_guess['variance_z'].append(res.x[2])
+            
+            SSE['variance_z'] += np.sum((res.x - tag_pos)**2)
+            SSE_XY['variance_z'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+            errors_rec['variance_z'].append(np.sum((res.x - tag_pos)**2))
+            errors_rec_XY['variance_z'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+            
+            # Correction of z coordinate
+            res_cor = arithmetic_mean(anc, res.x)
+            z_guess_cor['variance_z'].append(res_cor[2])
+            
+            SSE_cor_z['variance_z'] += np.sum((res_cor - tag_pos)**2)
+            errors_rec_cor_z['variance_z'].append(np.sum((res_cor - tag_pos)**2))
+            
+            
+            
+            anc = anchor_selection_random(selected_anchors, 4)
+            res = minimize(cost_function,
+                           initial_guess,
+                           args=(anc, 0, 0),
+                           method='L-BFGS-B',
+                           bounds=bnds,
+                           tol=tolerance,
+                           jac=gradient_cost_function,
+                           options={'disp': False})
+            
+            z_guess['random'].append(res.x[2])
+            
+            SSE['random'] += np.sum((res.x - tag_pos)**2)
+            SSE_XY['random'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+            errors_rec['random'].append(np.sum((res.x - tag_pos)**2))
+            errors_rec_XY['random'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+            
+            # Correction of z coordinate
+            res_cor = arithmetic_mean(anc, res.x)
+            z_guess_cor['random'].append(res_cor[2])
+            
+            SSE_cor_z['random'] += np.sum((res_cor - tag_pos)**2)
+            errors_rec_cor_z['random'].append(np.sum((res_cor - tag_pos)**2))
+            
+            
+            
+            
+            
+            anc = anchor_selection_det_covariance(selected_anchors, 4, 0, True)
+            res = minimize(cost_function,
+                           initial_guess,
+                           args=(anc, 0, 0),
+                           method='L-BFGS-B',
+                           bounds=bnds,
+                           tol=tolerance,
+                           jac=gradient_cost_function,
+                           options={'disp': False})
+            
+            z_guess['det_covariance_3D'].append(res.x[2])
+            
+            SSE['det_covariance_3D'] += np.sum((res.x - tag_pos)**2)
+            SSE_XY['det_covariance_3D'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+            errors_rec['det_covariance_3D'].append(np.sum((res.x - tag_pos)**2))
+            errors_rec_XY['det_covariance_3D'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+            
+            # Correction of z coordinate
+            res_cor = arithmetic_mean(anc, res.x)
+            z_guess_cor['det_covariance_3D'].append(res_cor[2])
+            
+            SSE_cor_z['det_covariance_3D'] += np.sum((res_cor - tag_pos)**2)
+            errors_rec_cor_z['det_covariance_3D'].append(np.sum((res_cor - tag_pos)**2))
+            
+            
+            
+            
+            anc = anchor_selection_det_covariance(selected_anchors, 4, 0, False)
+            res = minimize(cost_function,
+                           initial_guess,
+                           args=(anc, 0, 0),
+                           method='L-BFGS-B',
+                           bounds=bnds,
+                           tol=tolerance,
+                           jac=gradient_cost_function,
+                           options={'disp': False})
+            
+            z_guess['det_covariance_2D'].append(res.x[2])
+            
+            SSE['det_covariance_2D'] += np.sum((res.x - tag_pos)**2)
+            SSE_XY['det_covariance_2D'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+            errors_rec['det_covariance_2D'].append(np.sum((res.x - tag_pos)**2))
+            errors_rec_XY['det_covariance_2D'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+            
+            # Correction of z coordinate
+            res_cor = arithmetic_mean(anc, res.x)
+            z_guess_cor['det_covariance_2D'].append(res_cor[2])
+            
+            SSE_cor_z['det_covariance_2D'] += np.sum((res_cor - tag_pos)**2)
+            errors_rec_cor_z['det_covariance_2D'].append(np.sum((res_cor - tag_pos)**2))
+            
+            
+            
+            
+            
+            anc = anchor_selection_nearest(selected_anchors, 4)
+            res = minimize(cost_function,
+                           initial_guess,
+                           args=(anc, 0, 0),
+                           method='L-BFGS-B',
+                           bounds=bnds,
+                           tol=tolerance,
+                           jac=gradient_cost_function,
+                           options={'disp': False})
+            
+            z_guess['nearest'].append(res.x[2])
+            
+            SSE['nearest'] += np.sum((res.x - tag_pos)**2)
+            SSE_XY['nearest'] += np.sum((res.x[0:2] - tag_pos[0:2])**2)
+            errors_rec['nearest'].append(np.sum((res.x - tag_pos)**2))
+            errors_rec_XY['nearest'].append(np.sum((res.x[0:2] - tag_pos[0:2])**2))
+            
+            # Correction of z coordinate
+            res_cor = arithmetic_mean(anc, res.x)
+            z_guess_cor['nearest'].append(res_cor[2])
+            
+            SSE_cor_z['nearest'] += np.sum((res_cor - tag_pos)**2)
+            errors_rec_cor_z['nearest'].append(np.sum((res_cor - tag_pos)**2))
+            
+            
+            count_iterations += 1
 
 print("\tMean tag-anchor distance:",sum_d/count_iterations)
 print("")
 
 fignb = 0
 
+
+# %% Plot stats and diagrams
 for l in ["det_covariance_2D", "det_covariance_3D", "variance_z", "random", "nearest"]:
     print("== %s" % l)
     print("\t3D:")
@@ -687,6 +778,10 @@ for l in ["det_covariance_2D", "det_covariance_3D", "variance_z", "random", "nea
     print("\t  Mean Squared Error (MSE):", SSE[l]/count_iterations)
     print("\t  Median Squared Error:",np.median(errors_rec[l]))
     print("\t  Max / Min of Squared Error:",np.max(errors_rec[l]),",",np.min(errors_rec[l]))
+    print("\t  Z correction - Sum of Squared Errors (SSE):", SSE_cor_z[l])
+    print("\t  Z correction - Mean Squared Error (MSE):", SSE_cor_z[l]/count_iterations)
+    print("\t  Z correction - Median Squared Error:",np.median(errors_rec_cor_z[l]))
+    print("\t  Z correction - Max / Min of Squared Error:",np.max(errors_rec_cor_z[l]),",",np.min(errors_rec_cor_z[l]))
     
     print("\t2D:")
     print("\t  Sum of XY Squared Errors (SSE)", SSE_XY[l])
@@ -708,9 +803,40 @@ for l in ["det_covariance_2D", "det_covariance_3D", "variance_z", "random", "nea
     plt.figure(2)
     values, base = np.histogram(errors_rec[l], bins=5000)
     cumulative = np.cumsum(values)
-    plt.plot(base[:-1], cumulative/count_iterations, label=l)
+    p2 = plt.plot(base[:-1], cumulative/count_iterations, label=l)
     plt.figure(3)
     values, base = np.histogram(np.sqrt(errors_rec[l]), bins=5000)
+    cumulative = np.cumsum(values)
+    p3 = plt.plot(base[:-1], cumulative/count_iterations, label=l)
+    
+    # 3D error with z correction
+    plt.figure(2)
+    values, base = np.histogram(errors_rec_cor_z[l], bins=5000)
+    cumulative = np.cumsum(values)
+    plt.plot(base[:-1], cumulative/count_iterations, '--', label=l, color = p2[0].get_color())
+    plt.figure(3)
+    values, base = np.histogram(np.sqrt(errors_rec_cor_z[l]), bins=5000)
+    cumulative = np.cumsum(values)
+    plt.plot(base[:-1], cumulative/count_iterations, '--', label=l, color = p3[0].get_color())
+    
+    
+    # 3D error
+    plt.figure(4)
+    values, base = np.histogram(errors_rec[l], bins=5000)
+    cumulative = np.cumsum(values)
+    p2 = plt.plot(base[:-1], cumulative/count_iterations, label=l)
+    plt.figure(5)
+    values, base = np.histogram(np.sqrt(errors_rec[l]), bins=5000)
+    cumulative = np.cumsum(values)
+    p3 = plt.plot(base[:-1], cumulative/count_iterations, label=l)
+    
+    # 3D error with z correction
+    plt.figure(6)
+    values, base = np.histogram(errors_rec_cor_z[l], bins=5000)
+    cumulative = np.cumsum(values)
+    plt.plot(base[:-1], cumulative/count_iterations, label=l)
+    plt.figure(7)
+    values, base = np.histogram(np.sqrt(errors_rec_cor_z[l]), bins=5000)
     cumulative = np.cumsum(values)
     plt.plot(base[:-1], cumulative/count_iterations, label=l)
     
@@ -732,31 +858,64 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 
 plt.figure(2)
-plt.xlim(0,3)
+plt.xlim(0,10)
+plt.ylim(0,1)
+plt.xlabel("Squared error in the 3D plane (with [dotted line] and without [plain] Z correction) ($m^2$)")
+plt.ylabel("Cumulative proportion")
+plt.title("Cumulative distribution functions")
+plt.legend()
+
+plt.figure(3)
+plt.xlim(0,10)
+plt.ylim(0,1)
+plt.xlabel("Absolute error in the 3D plane (with [dotted line] and without [plain] Z correction) ($m$)")
+plt.ylabel("Cumulative proportion")
+plt.title("Cumulative distribution functions")
+plt.legend()
+
+plt.figure(4)
+plt.xlim(0,10)
 plt.ylim(0,1)
 plt.xlabel("Squared error in the 3D plane ($m^2$)")
 plt.ylabel("Cumulative proportion")
 plt.title("Cumulative distribution functions")
 plt.legend()
 
-plt.figure(3)
-plt.xlim(0,3)
+plt.figure(5)
+plt.xlim(0,10)
 plt.ylim(0,1)
 plt.xlabel("Absolute error in the 3D plane ($m$)")
+plt.ylabel("Cumulative proportion")
+plt.title("Cumulative distribution functions")
+plt.legend()
+
+plt.figure(6)
+plt.xlim(0,10)
+plt.ylim(0,1)
+plt.xlabel("Squared error in the 3D plane with z correction ($m^2$)")
+plt.ylabel("Cumulative proportion")
+plt.title("Cumulative distribution functions")
+plt.legend()
+
+plt.figure(7)
+plt.xlim(0,10)
+plt.ylim(0,1)
+plt.xlabel("Absolute error in the 3D plane with z correction ($m$)")
 plt.ylabel("Cumulative proportion")
 plt.title("Cumulative distribution functions")
 plt.legend()
 plt.show()
 
 
-plt.figure(4)
+plt.figure(7)
 i = 0
 for l in ["det_covariance_2D", "det_covariance_3D", "variance_z", "random", "nearest"]:
     #plt.scatter(np.arange(len(z_guess[l])), z_guess[l], marker="+", label=l)
     #plt.scatter(i * np.ones(len(z_guess[l])), z_guess[l], marker="+", label=l)
-    plt.hist(z_guess[l], bins=np.arange(-2,4,0.04))
+    plt.hist(z_guess[l], bins=np.arange(-10,12,0.04), alpha=0.4)
+    plt.hist(z_guess_cor[l], bins=np.arange(-10,12,0.04), alpha=0.4)
     plt.title("z guess: " + l)
-    plt.xlabel("# guesses")
-    plt.ylabel("z coordinate")
+    plt.xlabel("z coordinate")
+    plt.ylabel("# guesses")
     plt.show()
     i += 1

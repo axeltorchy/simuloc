@@ -6,6 +6,8 @@ Created on Wed May  6 15:02:15 2020
 @author: axel
 """
 
+import json
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -27,10 +29,10 @@ seed(0)
 
 # Simulation parameters
 default_z   = 2         # default anchor altitude
-min_z       = 3.
-max_z       = 6.
+min_z       = 1.
+max_z       = 5.
 ranging_dst = 20
-noise_std   = 0.30      # standard deviation gaussian noise rangings
+noise_std   = 0.05      # standard deviation gaussian noise rangings
 noise_mean  = 0.00     # mean gaussian noise rangings
 
 # If True, altitude will be chosen randomly, uniformly between min_z and max_z
@@ -47,7 +49,7 @@ def ranging(tag_pos, anchors, ranging_dst):
     
     Keyword arguments:
     tag_pos -- tag position (numpy array of length 3)
-    anchors -- list of anchors (list of dicts)
+    anchors -- list of anchors (list of dicts) {ID: {'x', 'y', 'z'}}
     ranging_dst -- ranging distance
     """
     ID = []
@@ -236,7 +238,7 @@ def anchor_selection_det_covariance(anchors, N, N_tries=100, cov_3D=True):
                 
             # print(vertices)
             # renormalisation
-            # for i in range(3):
+            # for i in range(3 if cov_3D else 2):
             #     i_min, i_max = min([vertices[j][i] for j in range(N)]), max([vertices[j][i] for j in range(N)])
             #     for j in range(N):
             #         vertices[j][i] = vertices[j][i] / (i_max - i_min) + i_min / (i_min - i_max)
@@ -252,7 +254,10 @@ def anchor_selection_det_covariance(anchors, N, N_tries=100, cov_3D=True):
             #     max([vertices[i][1] for i in range(N)]) - min([vertices[i][1] for i in range(N)])) * (
             #         max([vertices[i][2] for i in range(N)]) - min([vertices[i][2] for i in range(N)]))
 
-            cov = np.linalg.det(np.cov(vertices.T))                    
+            cov = np.linalg.det(np.cov(vertices.T))
+            
+            # cov = np.prod([np.var(vertices.T[i]) for i in range(len(vertices.T))])
+                         
             
             if cov > covariance:
                 covariance = cov
@@ -584,6 +589,9 @@ z_guess_cor = {"det_covariance_2D": [],
                  }
 
 
+outfile = open("guesses.json", "w")
+recordings = {}
+
 for i in range(len(x_tag)):
     if i%10 == 0:
         print("x =",x_tag[i])
@@ -591,6 +599,8 @@ for i in range(len(x_tag)):
         for k in range(len(z_tag)):
             N = 2
             for n in range(N):
+                
+                
                 # arithmetic / weighted mean z coordinate
                 def arithmetic_mean(anc, res_xyz):
                     # res_xyz = res.x from minimization function
@@ -624,12 +634,19 @@ for i in range(len(x_tag)):
                 z = z_tag[k]
                 tag_pos = np.array([x, y, z])
                 
+                
+                bnds = ((None, None), (None, None), (z, z))
+                
+                
                 #print("(x , y) = (%f , %f)" % (x, y))
                 ID = ranging(tag_pos, anchors, ranging_dst)
                 
+                nb_tot_anchors = min(len(ID), 6)
+                nb_anchors = min(len(ID), 4)
+                
                 distances = np.array([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])
                 #ID = np.random.choice(ID, min(len(ID), 8), replace=False)
-                ID = np.random.choice(ID, min(len(ID), 8), replace=False, p=(1./distances) /sum(1./distances))
+                ID = np.random.choice(ID, nb_tot_anchors, replace=False, p=(1./distances) /sum(1./distances))
                 
                 sum_d += sum([np.linalg.norm(tag_pos - np.array(anchors_locations[i])) for i in ID])/len(ID)
                 
@@ -642,14 +659,14 @@ for i in range(len(x_tag)):
                 initial_guess = np.sum([anchors_locations[i] for i in ID], axis=0)/len(ID)
                 initial_guess[2] = 0
         
-                anc = anchor_selection_variance_z(selected_anchors, 4)
+                anc = anchor_selection_variance_z(selected_anchors, nb_anchors)
                 res = minimize(cost_function,
                                initial_guess,
                                args=(anc, 0, 0),
                                method='L-BFGS-B',
                                bounds=bnds,
                                tol=tolerance,
-                               jac=gradient_cost_function,
+                               #jac=gradient_cost_function,
                                options={'disp': False})
                 
                 z_guess['variance_z'].append(res.x[2])
@@ -669,14 +686,14 @@ for i in range(len(x_tag)):
                 mean_distance['variance_z'].append(np.mean([anc[a]['dst'] for a in anc]))
                 
                 
-                anc = anchor_selection_random(selected_anchors, 4)
+                anc = anchor_selection_random(selected_anchors, nb_anchors)
                 res = minimize(cost_function,
                                initial_guess,
                                args=(anc, 0, 0),
                                method='L-BFGS-B',
                                bounds=bnds,
                                tol=tolerance,
-                               jac=gradient_cost_function,
+                               #jac=gradient_cost_function,
                                options={'disp': False})
                 
                 z_guess['random'].append(res.x[2])
@@ -698,14 +715,14 @@ for i in range(len(x_tag)):
                 
                 
                 
-                anc = anchor_selection_det_covariance(selected_anchors, 4, 0, True)
+                anc = anchor_selection_det_covariance(selected_anchors, nb_anchors, 0, True)
                 res = minimize(cost_function,
                                initial_guess,
                                args=(anc, 0, 0),
                                method='L-BFGS-B',
                                bounds=bnds,
                                tol=tolerance,
-                               jac=gradient_cost_function,
+                               #jac=gradient_cost_function,
                                options={'disp': False})
                 
                 z_guess['det_covariance_3D'].append(res.x[2])
@@ -725,15 +742,15 @@ for i in range(len(x_tag)):
                 mean_distance['det_covariance_3D'].append(np.mean([anc[a]['dst'] for a in anc]))
                 
                 
-                
-                anc = anchor_selection_det_covariance(selected_anchors, 4, 0, False)
+                # 2D
+                anc = anchor_selection_det_covariance(selected_anchors, nb_anchors, 0, False)
                 res = minimize(cost_function,
                                initial_guess,
                                args=(anc, 0, 0),
                                method='L-BFGS-B',
                                bounds=bnds,
                                tol=tolerance,
-                               jac=gradient_cost_function,
+                               #jac=gradient_cost_function,
                                options={'disp': False})
                 
                 z_guess['det_covariance_2D'].append(res.x[2])
@@ -755,14 +772,14 @@ for i in range(len(x_tag)):
                 
                 
                 
-                anc = anchor_selection_nearest(selected_anchors, 4)
+                anc = anchor_selection_nearest(selected_anchors, nb_anchors)
                 res = minimize(cost_function,
                                initial_guess,
                                args=(anc, 0, 0),
                                method='L-BFGS-B',
                                bounds=bnds,
                                tol=tolerance,
-                               jac=gradient_cost_function,
+                               #jac=gradient_cost_function,
                                options={'disp': False})
                 
                 z_guess['nearest'].append(res.x[2])
@@ -781,7 +798,23 @@ for i in range(len(x_tag)):
                 
                 mean_distance['nearest'].append(np.mean([anc[a]['dst'] for a in anc]))
                 
+                
+                recording = {'x_tag':   x,
+                             'y_tag':   y,
+                             'z_tag':   z,
+                             'x_guess': res.x[0],
+                             'y_guess': res.x[1],
+                             'z_guess': res.x[2],
+                             'method':  'nearest'
+                             }
+                
+                
+                recordings[count_iterations] = recording
+                
                 count_iterations += 1
+
+json.dump(recordings, outfile)
+outfile.close()
 
 print("\tMean tag-anchor distance:",sum_d/count_iterations)
 print("")
@@ -861,7 +894,7 @@ for l in ["det_covariance_2D", "det_covariance_3D", "variance_z", "random", "nea
     
 
 plt.figure(0)
-plt.xlim(0,3)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Squared error in the XY plane ($m^2$)")
 plt.ylabel("Cumulative proportion")
@@ -869,7 +902,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
     
 plt.figure(1)
-plt.xlim(0,3)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Absolute error in the XY plane ($m$)")
 plt.ylabel("Cumulative proportion")
@@ -877,7 +910,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 
 plt.figure(2)
-plt.xlim(0,10)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Squared error in the 3D plane (with [dotted line] and without [plain] Z correction) ($m^2$)")
 plt.ylabel("Cumulative proportion")
@@ -885,7 +918,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 
 plt.figure(3)
-plt.xlim(0,10)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Absolute error in the 3D plane (with [dotted line] and without [plain] Z correction) ($m$)")
 plt.ylabel("Cumulative proportion")
@@ -893,7 +926,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 
 plt.figure(4)
-plt.xlim(0,10)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Squared error in the 3D plane ($m^2$)")
 plt.ylabel("Cumulative proportion")
@@ -901,7 +934,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 
 plt.figure(5)
-plt.xlim(0,10)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Absolute error in the 3D plane ($m$)")
 plt.ylabel("Cumulative proportion")
@@ -909,7 +942,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 
 plt.figure(6)
-plt.xlim(0,10)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Squared error in the 3D plane with z correction ($m^2$)")
 plt.ylabel("Cumulative proportion")
@@ -917,7 +950,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 
 plt.figure(7)
-plt.xlim(0,10)
+plt.xlim(0,1)
 plt.ylim(0,1)
 plt.xlabel("Absolute error in the 3D plane with z correction ($m$)")
 plt.ylabel("Cumulative proportion")
@@ -925,6 +958,7 @@ plt.title("Cumulative distribution functions")
 plt.legend()
 plt.show()
 
+# %% z coordinate
 
 plt.figure(7)
 i = 0

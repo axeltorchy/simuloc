@@ -115,3 +115,56 @@ different localization methods.
 * Mean tag-anchor distances
 
 
+
+## Usage
+
+### Description of the data structures
+
+The simulator requires Python 3.5 or above as it incorporates type hinting,
+_i.e._ the arguments and return types of functions are explicit. 
+
+In addition to that, all functions are documented so that their action,
+arguments and return objects are fully described and leave no ambiguity.
+
+It was also decided to use dictionaries as much as possible. Dictionaries
+(Python type: `dict`) are associative arrays, _i.e._ key-indexed unordered
+collections. All anchor sets are stored as dictionaries. These latter are
+passed as function arguments by reference, which means that they can be
+modified by the function itself. It is useful as it means that we can
+keep the same dict of anchors and include the distances in the original
+dictionary and replace a single value every time a new ranging is done without
+creating a new dictionary.
+
+An anchor set is a `dict` or `dict`. Here is an example:
+```
+anchors = {
+            ID_A1: { 'x': x_A1,
+                     'y': y_A1,
+                     'z': z_A1 },
+            ID_A2: { 'x': x_A2,
+                     'y': y_A2,
+                     'z': z_A2 },
+            ...
+            ID_An: { 'x': x_An,
+                     'y': y_An,
+                     'z': z_An }
+          }
+```
+
+Hence, when anchors is passed as an argument and another dictionary is returned
+by the anchor selection procedure function, the "inner" dictionaries are
+
+
+It also means that anchor selection procedures should return the **IDs**
+for the anchors to be selected, not a new dictionary of anchors, in order
+to save memory.
+
+### Imports and usage
+
+The three modules `genenv`, `genmeas` and `genstats` must be imported
+in the main script.
+
+
+An example script is provided in `example1.py` to show the order in which
+to call the functions from the different modules.
+ 

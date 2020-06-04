@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun  4 10:44:17 2020
+Environment anchor generation module
+
+Provide functions to generate settings and save it to a JSON file.
 
 
-__author__ = "Rob Knight, Gavin Huttley, and Peter Maxwell"
-__copyright__ = "Copyright 2007, The Cogent Project"
-__credits__ = ["Rob Knight", "Peter Maxwell", "Gavin Huttley",
-                    "Matthew Wakefield"]
-__license__ = "GPL"
-__version__ = "1.0.1"
-__maintainer__ = "Rob Knight"
-__email__ = "rob@spot.colorado.edu"
+__author__ = "Axel Torchy"
+__copyright__ = "Copyright 2020, Wizzilab"
+__credits__ = ["Axel Torchy", "Wizzilab"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Axel Torchy"
+__email__ = "axel@wizzilab.com"
 __status__ = "Production"
-@author: axel
+
 """
 
-from typing import Union
+from typing import Union, Sequence, Dict
 import numpy as np
 import json
 
@@ -55,7 +56,7 @@ def generate_anchors_from_list(anc_list: Union[list, np.ndarray]) -> dict:
 def generate_anchors_from_json_file(filename: str) -> dict:
     """
     Generate a dict containing the 3D coordinates of the anchors from a pre-
-    recorder JSON file.
+    recorded JSON file.
      
     Parameters
     ----------
@@ -75,7 +76,15 @@ def generate_anchors_from_json_file(filename: str) -> dict:
     return anchors
     
 
-def save_anchors_to_json_file(anchors: dict, filename: str) -> None:
+def save_anchors_to_json_file(anchors: Dict[int, dict], filename: str) -> None:
+    """
+    Save a current anchor (dict) configuration to a JSON file.
+     
+    Parameters
+    ----------
+    anchors : dictionary of anchors matching the correct structure (see README)
+    filename : name of the JSON file. 
+    """
     try:
         with open(filename, 'w') as fp:
             json.dump(anchors, fp)
@@ -85,13 +94,42 @@ def save_anchors_to_json_file(anchors: dict, filename: str) -> None:
     return
 
 
-def generate_random_anchors() -> dict:
+def generate_uniform_anchors(x_min: float, x_max: float,
+                             y_min: float, y_max: float,
+                             z_min: float, z_max: float,
+                             N_anchors: int) -> dict:
+    """
+    Generate a dict containing the 3D coordinates of the anchors inside the 3D
+    cuboid, following a uniform random distribution.
+     
+    Parameters
+    ----------
+    x_min, x_max : bounds of the 3D cuboid on the X axis
+    y_min, y_max : bounds of the 3D cuboid on the Y axis
+    z_min, z_max : bounds of the 3D cuboid on the Z axis
+    N_anchors : number of anchors to be generated
+    
+    Returns
+    ----------
+    anchors : dict of dict containing the anchors, index from 0 to N_anchors-1
+    The coordinates are truncated (centimeter precision).
+    """
+    
+    anchors = {}
+    
+    for i in range(N_anchors):
+        coord = np.array([x_min, y_min, z_min]) + np.random.rand(3) * np.array(
+            [x_max-x_min, y_max-y_min, z_max-z_min])
+        coord = np.floor(coord * 100) / 100
+        anchors[i] = {'x': coord[0],
+                      'y': coord[1],
+                      'z': coord[2]}
+    
+    
+    return anchors
+        
+
     # To do: various ways of random generation.
     # * beta-Ginibre process
-    # * 3D uniform distribution
     # * equally spaced
-    
-    raise Exception("Unimplemented.")
-    
-    return {}
-        
+    # * ...

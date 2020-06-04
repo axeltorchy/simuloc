@@ -17,7 +17,7 @@ __status__ = "Production"
 
 """
 
-from typing import Union, Sequence, Dict
+from typing import Union, Dict
 import numpy as np
 import json
 
@@ -25,7 +25,8 @@ import json
 
 __all__ = ['generate_anchors_from_list',
            'generate_anchors_from_json_file',
-           'generate_random_anchors',
+           'generate_manual_anchors',
+           'generate_uniform_anchors',
            'save_anchors_to_json_file']
 
 
@@ -94,6 +95,71 @@ def save_anchors_to_json_file(anchors: Dict[int, dict], filename: str) -> None:
     return
 
 
+def generate_manual_anchors() -> dict:
+    """
+    Prompts the user to manually and successively enter the X,Y,Z coordinates
+    of the anchors.
+     
+    Parameters
+    ----------
+    None
+    
+    Returns
+    ----------
+    anchors : dict of dict containing the anchors, index from 0 to N_anchors-1
+    The coordinates are truncated (centimeter precision).
+    """
+    
+    print("You will be asked to manually input the XYZ coordinates of the anchors.")
+    print("You can stop at any moment by typing 'q' or 'Q' instead of a float.")
+    print("Then, the current anchor will be dismissed and only the completed anchors will be saved.")
+    
+    anchors = {}
+    i = 0
+    
+    while True:
+        print(f"==== Anchor {i}:", end="")
+        x = input("Please enter the X coordinate.   ")
+        if x == "q" or x == "Q":
+            break
+        
+        try:
+            x = float(x)
+        except ValueError:
+            print("Please enter a float for the X coordinate. Try again.")
+            continue
+        
+        y = input("Please enter the Y coordinate.   ")
+        if y == "q" or y == "Q":
+            break
+        
+        try:
+            y = float(y)
+        except ValueError:
+            print("Please enter a float for the Y coordinate. Try again.")
+            continue
+        
+        z = input("Please enter the Z coordinate.   ")
+        if z == "q" or z == "Q":
+            break
+        
+        try:
+            z = float(z)
+        except ValueError:
+            print("Please enter a float for the Z coordinate. Try again.")
+            continue
+        
+        anchors[i] = {'x': x,
+                      'y': y,
+                      'z': z}
+        
+        print(f"  ** Anchor {i} added: (x, y, z) = ({x}, {y}, {z})")
+        
+        i += 1
+        
+    return anchors 
+
+
 def generate_uniform_anchors(x_min: float, x_max: float,
                              y_min: float, y_max: float,
                              z_min: float, z_max: float,
@@ -133,3 +199,19 @@ def generate_uniform_anchors(x_min: float, x_max: float,
     # * beta-Ginibre process
     # * equally spaced
     # * ...
+
+
+def generate_grid(x_min, x_max, y_min, y_max, z_min, z_max, step):
+    """
+    Generates a grid for positions to be tested. The step is assumed to be 
+    the same over all 3 dimensions.
+    Returns a numpy 3D meshgrid.
+    """
+    
+    x_ = np.arange(x_min, x_max, step)
+    y_ = np.arange(y_min, y_max, step)
+    z_ = np.arange(z_min, z_max, step)
+    
+    XX, YY, ZZ = np.meshgrid(x_, y_, z_, indexing='xy')
+    
+    return XX, YY, ZZ

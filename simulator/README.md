@@ -90,10 +90,11 @@ anchor positions and measurements.
 This block saves the results of all the localizations in a file as a JSON
 file, and includes all the relevant information for the statistics for each
 recording:
+- initial position
 - real tag position
 - inferred tag position
 - anchor selection method
-- localization method
+- localization method: minimization cost function + precision / LS / NLS
 - noise model
 - selected anchors and ranging measurements
 
@@ -113,7 +114,8 @@ different localization methods.
 * Cumulative Distribution Function
 * Maximum and minimum error
 * Mean tag-anchor distances
-
+* Histogram of z positions (useful to observe some phenomenons w.r.t. 
+ 
 
 
 ## Usage
@@ -121,7 +123,7 @@ different localization methods.
 ### Description of the data structures
 
 The simulator requires Python 3.5 or above as it incorporates type hinting,
-_i.e._ the arguments and return types of functions are explicit. 
+_i.e._ the arguments and return types of functions are explicitly specified. 
 
 In addition to that, all functions are documented so that their action,
 arguments and return objects are fully described and leave no ambiguity.
@@ -135,21 +137,23 @@ keep the same dict of anchors and include the distances in the original
 dictionary and replace a single value every time a new ranging is done without
 creating a new dictionary.
 
-An anchor set is a `dict` or `dict`. Here is an example:
+An anchor set is a `dict` or `dict`. Here is an example with `n` anchors:
 ```
 anchors = {
-            ID_A1: { 'x': x_A1,
-                     'y': y_A1,
-                     'z': z_A1 },
-            ID_A2: { 'x': x_A2,
-                     'y': y_A2,
-                     'z': z_A2 },
-            ...
-            ID_An: { 'x': x_An,
-                     'y': y_An,
-                     'z': z_An }
-          }
+  ID_A1: { 'x': x_A1,
+           'y': y_A1,
+           'z': z_A1 },
+  ID_A2: { 'x': x_A2,
+           'y': y_A2,
+           'z': z_A2 },
+  ...
+  ID_An: { 'x': x_An,
+           'y': y_An,
+           'z': z_An }
+}
 ```
+
+
 
 Hence, when anchors is passed as an argument and another dictionary is returned
 by the anchor selection procedure function, the "inner" dictionaries are
@@ -163,6 +167,11 @@ to save memory.
 
 The three modules `genenv`, `genmeas` and `genstats` must be imported
 in the main script.
+
+There are several ways to create an localization environment i.e. a set of
+anchors to be fed as an input to the next blocks. It can be done manually by
+creating a dictionary following the above described structure. However, the
+`genenv` module provides three ways of doing so. 
 
 
 An example script is provided in `example1.py` to show the order in which

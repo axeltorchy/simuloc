@@ -1,3 +1,7 @@
 *.swp
 .~lock*
 *.json
+
+# Byte-compiled
+__pycache__/
+

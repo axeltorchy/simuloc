@@ -196,7 +196,7 @@ def generate_uniform_anchors(x_min: float, x_max: float,
         
 
     # To do: various ways of random generation.
-    # * beta-Ginibre process
+    # * beta-Ginibre process (see JS Gomez PhD thesis)
     # * equally spaced
     # * ...
 

@@ -89,8 +89,9 @@ selection procedure which takes into account:
 Finally, the geolocalization algorithm is executed using the set of selected
 anchor positions and measurements.
 
-This block saves the results of all the localizations in a file as a JSON
-file, and includes all the relevant information for the statistics for each
+This block saves the results of all the localizations in a file containing
+**multiple JSON objects, more precisely one JSON object per line**.
+It includes all the relevant information for the statistics for each
 recording:
 - initial position
 - real tag position

@@ -9,7 +9,6 @@ Provide functions to generate settings and save it to a JSON file.
 __author__ = "Axel Torchy"
 __copyright__ = "Copyright 2020, Wizzilab"
 __credits__ = ["Axel Torchy", "Wizzilab"]
-__license__ = ""
 __version__ = "1.0"
 __maintainer__ = "Axel Torchy"
 __email__ = "axel@wizzilab.com"
@@ -27,7 +26,8 @@ __all__ = ['generate_anchors_from_list',
            'generate_anchors_from_json_file',
            'generate_manual_anchors',
            'generate_uniform_anchors',
-           'save_anchors_to_json_file']
+           'save_anchors_to_json_file',
+           'generate_grid']
 
 
 
@@ -211,7 +211,5 @@ def generate_grid(x_min, x_max, y_min, y_max, z_min, z_max, step):
     x_ = np.arange(x_min, x_max, step)
     y_ = np.arange(y_min, y_max, step)
     z_ = np.arange(z_min, z_max, step)
-    
-    XX, YY, ZZ = np.meshgrid(x_, y_, z_, indexing='xy')
-    
-    return XX, YY, ZZ
+        
+    return x_, y_, z_

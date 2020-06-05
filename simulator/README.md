@@ -31,7 +31,8 @@ completely different settings. Instead, one might prefer observing the influence
 of a change in individual parameters to understand their impact on the result.
 
 Thus, the chosen solution to be able to observe simultaneously the results is
-to run several simulations and save the results in the same file. 
+to run several simulations, save the results in the same file and feed the final
+result to the visualization module.
 
 When reading the log file, the visualization module will detect all the
 different configurations and superimpose the results on the same graphs.
@@ -66,7 +67,8 @@ each of the above mentioned positions of the grid.
   Thus, the localization algorithm to be called afterwards will depend on the
 measurement type.
 
-  For now, **only the UWB-TWR distance measurements** are supported.
+  For now, **only the Time of Flight (UWB-TWR= distance measurements** are
+supported.
 A multilateration algorithm will then be called to compute the location of the
 device.
 
@@ -114,7 +116,9 @@ different localization methods.
 * Cumulative Distribution Function
 * Maximum and minimum error
 * Mean tag-anchor distances
-* Histogram of z positions (useful to observe some phenomenons w.r.t. 
+* Histogram of z positions (useful to observe some phenomenons given that
+the precision on the z axis is known to be much less accurate due to the
+lack of variability of the anchors' positions on the vertical axis).
  
 
 
@@ -155,13 +159,6 @@ anchors = {
 
 
 
-Hence, when anchors is passed as an argument and another dictionary is returned
-by the anchor selection procedure function, the "inner" dictionaries are
-
-
-It also means that anchor selection procedures should return the **IDs**
-for the anchors to be selected, not a new dictionary of anchors, in order
-to save memory.
 
 ### Imports and usage
 
@@ -171,7 +168,9 @@ in the main script.
 There are several ways to create an localization environment i.e. a set of
 anchors to be fed as an input to the next blocks. It can be done manually by
 creating a dictionary following the above described structure. However, the
-`genenv` module provides three ways of doing so. 
+`genenv` module provides three ways of doing so:
+
+1. `generate_anchors_from_list` takes a $N \times 3$ array as 
 
 
 An example script is provided in `example1.py` to show the order in which

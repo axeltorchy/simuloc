@@ -352,21 +352,34 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
     ----------
     None. This function writes the results directly to the text file. 
     """
+    
+    # Generate unique ID for the simulation results, based on the simulation
+    # beginning timestamp
+    simu_uid = int(np.floor(time()))
+    
+    
     try:
         open_mode = "a+"
         if replace_file:
             open_mode = "w+"
         outfile = open(filename, open_mode)
+        options_outfile = open("options_" + filename, open_mode)
+        to_write = {}
+        to_write['simu_uid'] = simu_uid
+        to_write['options'] = options
+        to_write['anchors'] = anchors
+        to_write['x_grid'] = x_grid.tolist()
+        to_write['y_grid'] = y_grid.tolist()
+        to_write['z_grid'] = z_grid.tolist()
+        to_write['N_tries'] = N_tries
+        json.dump(to_write, options_outfile)
+        options_outfile.close()
     except:
         raise Exception(f"An error occured when opening file {outfile}.")
     
     N_tot_steps = len(x_grid) * len(y_grid) * len(z_grid) * N_tries
     print(N_tot_steps)
     step_count = 0
-    
-    # Generate unique ID for the simulation results, based on the simulation
-    # beginning timestamp
-    simu_uid = np.floor(time())
     
     result = {}
     
@@ -464,7 +477,10 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
                     # Store all the localization information in a dict to be
                     # dumped as a JSON object in the log file to generate the
                     # stats.
-                    
+                    # 
+                    # The options are the same for all the localization steps
+                    # of the simulation and can thus be retrieved thanks to the
+                    # simu_uid in another file (beginning by "options_").
                     
                     # This is redundant with the options + post_selected_anchors information
                     # result['initial_pos'] = {'x': initial_guess[0],
@@ -478,7 +494,6 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
                                          'y': tag_pos[1],
                                          'z': tag_pos[2]}
                     
-                    result['options'] = options
                     # These include the ranging distances
                     result['post_selected_anchors'] = post_selected_anchors
                     

@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 x_min, x_max = 1, 30
 y_min, y_max = 1, 20
 z_min, z_max = 0.5, 3
-step = 0.5
+step = 1
 
 # Number of tries for each grid position
 N_tries = 3
@@ -152,8 +152,7 @@ if __name__ == "__main__":
     
     # Several simulations can be run successively in order to compare the
     # performance of the localization with different parameters.
-    
-    
+        
     options = {
         'method':   "UWB_TWR",
         'initial_pos':      {'type': "bary_z0", 'initial_z': 0},
@@ -178,6 +177,39 @@ if __name__ == "__main__":
                    N_tries,
                    options
                    )
+    
+    # Another simulation with increased noise to compare the performance.
+    
+    sigma_noise = 2. * sigma_noise
+    options = {
+        'method':   "UWB_TWR",
+        'initial_pos':      {'type': "bary_z0", 'initial_z': 0},
+        'noise_model':      noise_model,
+        'noise_params':     {"mu": mu_noise, "sigma": sigma_noise},
+        'anchor_selection': "nearest",
+        'optimization':     "basic",
+        'tolerance':        tolerance,
+        'bounds':           bnds,
+        'ranging_distance': ranging_dst,
+        'N_anchors_pre':    N_anchors_pre,
+        'N_anchors_post':   N_anchors_post
+        }
+
+    
+    genmeas.locate_grid(filename,
+                   replace_file,
+                   anchors,
+                   x_grid,
+                   y_grid,
+                   z_grid,
+                   N_tries,
+                   options
+                   )
+    
+    
+    
+    
+    
     
                     
                     

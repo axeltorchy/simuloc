@@ -171,7 +171,16 @@ anchors to be fed as an input to the next blocks. It can be done manually by
 creating a dictionary following the above described structure. However, the
 `genenv` module provides three ways of doing so:
 
-1. `generate_anchors_from_list` takes a $N \times 3$ array as 
+1. `generate_anchors_from_list` takes a $N \times 3$ coordinate array as an
+input and generates the anchors dict.
+2. `generate_anchors_from_json_file` takes a JSON dump of the anchors dict
+as an input. This file can be generated with the `save_anchors_to_json_file`
+function.
+3. `generate_manual_anchors` prompts the user for manual input of the
+anchors coordinates. Can be useful to generate an environment and then save
+it to a JSON file using the `save_anchors_to_json_file`.
+4. `generate_uniform_anchors` generates a set of N anchors randomly placed
+in a 3D box which bounds are specified, following a uniform distribution.
 
 
 An example script is provided in `example1.py` to show the order in which

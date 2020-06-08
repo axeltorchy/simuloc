@@ -50,16 +50,22 @@ filename = "loc.json"
 # If replace_file is True, each simulation will overwrite the previous results.
 # Keep it to False to superimpose the results of several settings.
 
-# Number of anchors pre-ranging
+# Number of anchors pre-ranging.
+# Choose 0 for no pre-random selection i.e. all the anchors within the ranging
+# distance will be kept if N_anchors_pre == 0
 N_anchors_pre = 8
 
-# Number of anchors post-ranging
+# Number of anchors post-ranging. 
 N_anchors_post = 5
 
 replace_file = False
 
 # Optimization parameters
+# The bounds are of the form: ((x_min, x_max), (y_min, y_max), (z_min, z_max))
+# To be in plane constrained mode, choose   z_min = z_max = constrained_alt
+# Tolerance should be small enough (no bigger than 1e-5)
 bnds = ((None, None), (None, None), (None, None))
+tolerance = 1e-7
 
 # Name of the file where to save the anchors' location information
 anchors_filename = "anchors_dump.json"
@@ -147,13 +153,15 @@ if __name__ == "__main__":
     # Several simulations can be run successively in order to compare the
     # performance of the localization with different parameters.
     
+    
     options = {
-        'ranging_method':   "UWB_TWR",
-        'initial_pos':      "bary_z0",
+        'method':   "UWB_TWR",
+        'initial_pos':      {'type': "bary_z0", 'initial_z': 0},
         'noise_model':      noise_model,
         'noise_params':     {"mu": mu_noise, "sigma": sigma_noise},
         'anchor_selection': "nearest",
-        'optimization':     genmeas.cost_function,
+        'optimization':     "basic",
+        'tolerance':        tolerance,
         'bounds':           bnds,
         'ranging_distance': ranging_dst,
         'N_anchors_pre':    N_anchors_pre,

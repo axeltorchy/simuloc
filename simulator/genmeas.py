@@ -23,6 +23,9 @@ import json
 from scipy.optimize import minimize
 from random import sample, seed
 from itertools import combinations
+from heapq import nsmallest 
+
+from time import time
 
 # List of public objects of the module, as interpreted by "import *"
 
@@ -70,26 +73,21 @@ def cost_function(point, anchors, weight_method):
 #     return G
     
 
-def anchor_selection_nearest(anchors, N):
+def anchor_selection_nearest(tag_pos, anchors, N):
     """Returns the N nearest anchors."""
+    
     m = len(anchors)
     if N > m:
         raise Exception("Impossible to select",N,"among",m,"anchors.")
     
-    min_dsts = 10e8 * np.ones(N)
-    min_indx = np.zeros(N, dtype=int)
+    distances = {i: np.linalg.norm(tag_pos - np.array([anchors[i]['x'], anchors[i]['y'], anchors[i]['z']])) for i in anchors }
     
-    for i in anchors:
-        dst = anchors[i]['dst']
-        ind_max = np.argmax(min_dsts)
-        if min_dsts[ind_max] > dst:
-            min_dsts[ind_max] = dst
-            min_indx[ind_max] = i
+    selected_IDs = nsmallest(N, distances, key = distances.get)
         
     selected_anchors = {}
             
     for i in range(N):
-        selected_anchors[min_indx[i]] = anchors[min_indx[i]]
+        selected_anchors[selected_IDs[i]] = anchors[selected_IDs[i]]
     
     return selected_anchors
 
@@ -276,7 +274,7 @@ def anchor_selection_tetrahedron(anchors, N_tries=100):
     return selected_anchors
 
 
-def ranging(tag_pos, anchors, ranging_dst):
+def ranging(tag_pos: np.ndarray, anchors: dict, ranging_dst: float):
     """Scans the anchors and returns those in the specified range.
      
     Parameters
@@ -299,6 +297,36 @@ def ranging(tag_pos, anchors, ranging_dst):
     return selected_anchors
 
 
+def generate_UWB_TWR(tag_pos, anchors, noise_model, noise_params):
+    """Generates ranging distances for UWB_TWR measurements for each anchor
+    and adds noise following the given noise model and parameters.
+     
+    Parameters
+    ----------
+    tag_pos : tag position (numpy array of length 3)
+    anchors : dict of anchors (list of dicts) {ID: {'x', 'y', 'z'}}
+    noise_model : only "gaussian" is supported
+    noise_params : mu and sigma for the noise
+    
+    Returns
+    ----------
+    None. Adds a "dst" field to each anchor.
+    """
+    for i in anchors:
+        anc_pos = np.array([anchors[i]['x'], anchors[i]['y'], anchors[i]['z']])
+        dst = np.linalg.norm(tag_pos - anc_pos)
+        
+        # Error generation
+        err = 0
+        if noise_model == "gaussian":
+            err = np.random.normal(noise_params['mu'], noise_params['sigma'])
+        else:
+            raise Exception(f"Noise model not supported: {noise_model}.")
+        anchors[i]['dst'] = dst + err
+        anchors[i]['dst'] = np.floor(100 * anchors[i]['dst']) / 100
+    
+    return
+
 def locate_grid(filename: str, replace_file: bool, anchors: dict,
                 x_grid: np.ndarray, y_grid: np.ndarray, z_grid: np.ndarray,
                 N_tries: int, options: dict) -> None:
@@ -313,7 +341,8 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
     ----------
     filename : name of the file to save the localization results
     replace_file : if True, the file will be replaced every time this function
-        is called
+        is called. If False, it will append the results to the existing file
+        (if it already exists, otherwise will create a new one)
     x_grid, y_grid, z_grid : 1D numpy arrays containing the ticks of the X, Y
         and Z axes where the tag is to be localized
     N_tries : number of successive localizations (and measurement generations)
@@ -324,13 +353,22 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
     None. This function writes the results directly to the text file. 
     """
     try:
-        outfile = open(filename, "w")
+        open_mode = "a+"
+        if replace_file:
+            open_mode = "w+"
+        outfile = open(filename, open_mode)
     except:
         raise Exception(f"An error occured when opening file {outfile}.")
     
     N_tot_steps = len(x_grid) * len(y_grid) * len(z_grid) * N_tries
     print(N_tot_steps)
     step_count = 0
+    
+    # Generate unique ID for the simulation results, based on the simulation
+    # beginning timestamp
+    simu_uid = np.floor(time())
+    
+    result = {}
     
     for i in range(len(x_grid)):
         for j in range(len(y_grid)):
@@ -347,17 +385,105 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
                     
                     anchors_ranging = ranging(tag_pos, anchors, options['ranging_distance'])
                     
+                    N_anchors_pre = min(len(anchors_ranging), options['N_anchors_pre'])
+                    N_anchors_post = min(len(anchors_ranging), options['N_anchors_post'])
+                    
+                    IDs_anchors_ranging = [*anchors_ranging]
+                    
+                    # If N_anchors_pre is zero, there is no random pre-selection
+                    # of anchors. Otherwise, only N_anchors_pre of those within
+                    # ranging distance will be kept, with probability
+                    # proportional to the inverse of the tag-anchor distance
+                    pre_selected_anchors = {}
+                    
+                    if N_anchors_pre > 0:
+                        distances = np.array([np.linalg.norm(tag_pos - np.array([anchors_ranging[a]['x'], anchors_ranging[a]['y'], anchors_ranging[a]['z']])) for a in IDs_anchors_ranging])
+                        
+                        ID = np.random.choice(IDs_anchors_ranging, N_anchors_pre, replace=False,
+                                              p=(1./distances) / sum(1./distances))
+                        for i in ID:
+                            pre_selected_anchors[int(i)] = anchors_ranging[i]
+                    else:
+                        pre_selected_anchors = anchors_ranging
+                    
                     bnds = options['bounds']
                     
+                    # Anchor selection procedure
+                    # It is done _before_ the ranging measurements, just like
+                    # what would happen in real life if we want to avoid
+                    # unnecessary energy consumption and do the ranging a
+                    # posteriori, after selecting a reduced subset of anchors.
+                    
+                    if options['anchor_selection'] == "nearest":
+                        post_selected_anchors = anchor_selection_nearest(tag_pos, pre_selected_anchors, N_anchors_post)
+                    elif options['anchor_selection'] == "variance_z":
+                        post_selected_anchors = anchor_selection_variance_z(pre_selected_anchors, N_anchors_post)
+                    elif options['anchor_selection'] == "det_covariance_2D":
+                        post_selected_anchors = anchor_selection_det_covariance(pre_selected_anchors, N_anchors_post, N_tries=0, cov_3D=False)
+                    elif options['anchor_selection'] == "det_covariance_3D":
+                        post_selected_anchors = anchor_selection_det_covariance(pre_selected_anchors, N_anchors_post, N_tries=0, cov_3D=True)
+                    elif options['anchor_selection'] == "random":
+                        post_selected_anchors = anchor_selection_random(pre_selected_anchors, N_anchors_post)
+                    else:
+                        raise Exception(f"Anchor selection method not supported: {options['anchor_selection']}.")
                     
                     
                     
+                    # Measurement generation
+                    # It will add the measurements directly in the
+                    # post_selected_anchorsdict by adding another field.
+                    if options['method'] == "UWB_TWR":
+                        generate_UWB_TWR(tag_pos, post_selected_anchors,
+                                         options['noise_model'], options['noise_params'])
+                    else:
+                        raise Exception(f"Measurement method not supported: {options['method']}.")
                     
-                    initial_guess = np.sum([anchors_locations[i] for i in ID], axis=0)/len(ID)
-                    initial_guess[2] = 0
+                    # Choice of the initial guess
+                    if options['initial_pos']['type'] == "bary_z0":
+                        initial_guess = np.sum([[post_selected_anchors[i]['x'], post_selected_anchors[i]['y'], post_selected_anchors[i]['z']] for i in post_selected_anchors], axis=0)/len(post_selected_anchors)
+                        initial_guess[2] = float(options['initial_pos']['initial_z'])
                     
-                    # np.linalg.det(np.random.rand(20,20))
-                    #json.dumps(B, outfile)
-                    # outfile.write('\n')
-                    # outfile.close()          
+                    elif options['initial_pos']['type'] == "weighted_bary":
+                        initial_guess = np.sum([[post_selected_anchors[i]['x'], post_selected_anchors[i]['y'], post_selected_anchors[i]['z']] for i in post_selected_anchors], axis=0)/len(post_selected_anchors)
+                    else:
+                        raise Exception("Initial position option not supported.")
+                        
+                    
+                    if options['optimization'] == "basic":
+                        res = minimize(cost_function,
+                                       initial_guess,
+                                       args=(post_selected_anchors, 0),
+                                       method='L-BFGS-B',
+                                       bounds=bnds,
+                                       tol=options['tolerance'],
+                                       #jac=gradient_cost_function,
+                                       options={'disp': False})
+                    else:
+                        raise Exception(f"Optimization option not supported: {options['optimization']}.")
+                    
+                    # Store all the localization information in a dict to be
+                    # dumped as a JSON object in the log file to generate the
+                    # stats.
+                    
+                    
+                    # This is redundant with the options + post_selected_anchors information
+                    # result['initial_pos'] = {'x': initial_guess[0],
+                    #                          'y': initial_guess[1],
+                    #                          'z': initial_guess[2]}
+                    result['simu_uid'] = simu_uid
+                    result['res_pos'] = {'x': res.x[0],
+                                         'y': res.x[1],
+                                         'z': res.x[2]}
+                    result['tag_pos'] = {'x': tag_pos[0],
+                                         'y': tag_pos[1],
+                                         'z': tag_pos[2]}
+                    
+                    result['options'] = options
+                    # These include the ranging distances
+                    result['post_selected_anchors'] = post_selected_anchors
+                    
+                    json.dump(result, outfile)
+                    outfile.write('\n')
+        
+    outfile.close()          
                     

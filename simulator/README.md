@@ -176,4 +176,19 @@ creating a dictionary following the above described structure. However, the
 
 An example script is provided in `example1.py` to show the order in which
 to call the functions from the different modules.
+
+
+
+
+
+
+
+## TODO / Other aspects to study
+
+Successive localizations with z correction ?
+1. First localization
+2. Keep X and Y, compute Z as the weighted average as explained earlier to Yordan
+3. Fix Z to this new value and optimize on XY in plane constrained mode
+4. Go back to step 2 several times
+
  

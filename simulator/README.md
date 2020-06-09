@@ -188,16 +188,56 @@ to call the functions from the different modules.
 
 
 
+Then, a 3D grid should be created. `genenv.generate_grid` returns the
+required grid by specifying X, Y, Z bounds and a grid step. Note that
+for now, only cuboid spaces are supported.
+
+An `options` dict should be created and the `genmeas.locate_grid` function
+should should be called. It will create a log file with the specied file
+name and save all the localization results in this latter.
+
+Several simulations (_i.e._ several calls to the `locate_grid` function) can
+be made successively in order to compare the results on the same graph.
+
+Finally, the statistics module function `genstats.print_stats` should be
+called after the log file is being parsed by the `genstats.read_log_file`
+function:
+
+```
+data, metadata = genstats.read_log_file(filename)
+genstats.print_stats(data, metadata, do_plot)
+```
+
+
+We highly encourage the user to refer to the complete example provided in
+the `example.py` file.
+
 
 
 
 
 ## TODO / Other aspects to study
 
-Successive localizations with z correction ?
-1. First localization
-2. Keep X and Y, compute Z as the weighted average as explained earlier to Yordan
-3. Fix Z to this new value and optimize on XY in plane constrained mode
-4. Go back to step 2 several times
+* Successive localizations with z correction ?
+  1. First localization
+  2. Keep X and Y, compute Z as the weighted average as explained earlier to Yordan
+  3. Fix Z to this new value and optimize on XY in plane constrained mode
+  4. Go back to step 2 several times
 
+
+* Other random generations of anchor environments
+
+* Only use 2D instead of 3D covariance criterium when all the anchors are exactly
+at the same altitude (because the criterium will be zero for all configurations if
+that is the case, and thus become irrelevant)
+
+* Add other noise models
+
+* Add other relevant statistics:
+  - mean/median tag-anchor distance
+  - mean/median distance between the final guess and the initial guess
+
+* Add other ranging technologies (AoA...)
+
+ 
  

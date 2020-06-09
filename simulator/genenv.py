@@ -25,7 +25,8 @@ __all__ = ['generate_anchors_from_list',
            'generate_manual_anchors',
            'generate_uniform_anchors',
            'save_anchors_to_json_file',
-           'generate_grid']
+           'generate_grid',
+           'random_z_coordinate']
 
 
 
@@ -211,3 +212,29 @@ def generate_grid(x_min, x_max, y_min, y_max, z_min, z_max, step):
     z_ = np.arange(z_min, z_max, step)
         
     return x_, y_, z_
+
+
+def random_z_coordinate(anchors, z_min, z_max):
+    """
+    Takes a pre-made anchors dict as an input and generates random z coordinates
+    uniformly distributed between z_min and z_max.
+
+    Parameters
+    ----------
+    anchors : dict
+        Contains all the anchors information (x, y, z coordinates).
+    z_min : float
+        Minimum value for the z coordinates to be generated.
+    z_max : float
+        Maximum value for the z coordinates to be generated.
+
+    Returns
+    -------
+    None.
+    """
+    
+    for a in anchors:
+        z = z_min + np.random.rand() * (z_max - z_min)
+        anchors[a]['z'] = z
+        
+    return

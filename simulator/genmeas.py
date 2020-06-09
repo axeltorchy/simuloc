@@ -51,6 +51,29 @@ def cost_function(point, anchors, weight_method):
     return s
 
 
+def cost_function2(point, anchors, weight_method):
+    x = point[0]
+    y = point[1]
+    z = point[2]
+
+    s = 0
+    
+    for i in anchors:
+        x_i = anchors[i]['x']
+        y_i = anchors[i]['y']
+        z_i = anchors[i]['z']
+        
+        # d_i = np.linalg.norm(np.array([x,y,z]) - np.array([x_i, y_i, z_i]))
+        d_i_sq = np.sum((np.array([x,y,z])-np.array([x_i, y_i, z_i]))**2)
+        
+        # Two possible weight methods
+        if weight_method == 1: # proportional to the inverse of squared dist
+            s += ((anchors[i]['dst'])**2 - d_i_sq)**2 / ((anchors[i]['dst'])**2)
+        else:
+            s += ((anchors[i]['dst'])**2 - d_i_sq)**2
+    
+    return s
+
 # To be verified
     
 # def gradient_cost_function(point, anchors, weight_method):
@@ -433,14 +456,34 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     
                     if options['anchor_selection'] == "nearest":
                         post_selected_anchors = anchor_selection_nearest(tag_pos, pre_selected_anchors, N_anchors_post)
+                    
                     elif options['anchor_selection'] == "variance_z":
                         post_selected_anchors = anchor_selection_variance_z(pre_selected_anchors, N_anchors_post)
+                    
+                    elif options['anchor_selection'] == "det_covariance_3D":
+                        # We have to check whether all the anchors are on the same
+                        # plane. If yes, only 2D covariance should be used.
+                        vertices = np.zeros((N_anchors_pre,3))
+                        count = 0
+                        for a in pre_selected_anchors:
+                            vertices[count][0] = pre_selected_anchors[a]['x']
+                            vertices[count][1] = pre_selected_anchors[a]['y']
+                            vertices[count][2] = pre_selected_anchors[a]['z']
+                            count += 1
+                        
+                        cov = np.linalg.det(np.cov(vertices.T))
+                        
+                        cov_3D = True
+                        if cov < 10e-2: # Choose some tolerance
+                            cov_3D = False
+                        post_selected_anchors = anchor_selection_det_covariance(pre_selected_anchors, N_anchors_post, N_tries=0, cov_3D=cov_3D)
+                    
                     elif options['anchor_selection'] == "det_covariance_2D":
                         post_selected_anchors = anchor_selection_det_covariance(pre_selected_anchors, N_anchors_post, N_tries=0, cov_3D=False)
-                    elif options['anchor_selection'] == "det_covariance_3D":
-                        post_selected_anchors = anchor_selection_det_covariance(pre_selected_anchors, N_anchors_post, N_tries=0, cov_3D=True)
+                    
                     elif options['anchor_selection'] == "random":
                         post_selected_anchors = anchor_selection_random(pre_selected_anchors, N_anchors_post)
+                    
                     else:
                         raise Exception(f"Anchor selection method not supported: {options['anchor_selection']}.")
                     
@@ -471,7 +514,7 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     # print(initial_guess)
                     
                     if options['optimization'] == "basic":
-                        res = minimize(cost_function,
+                        res = minimize(cost_function2,
                                        initial_guess,
                                        args=(post_selected_anchors, 0),
                                        method='L-BFGS-B',

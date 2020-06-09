@@ -241,9 +241,9 @@ that is the case, and thus become irrelevant)~~
 
 * Add possibility to use a random seed for the reproducibility of simulations
 
-* Add explicit support for plane-constrained mode (now it is possible, but to do
+* ~~Add explicit support for plane-constrained mode (now it is possible, but to do
 so: the z-grid should be an array with only one value, and the bounds on z should
-be z_min = z and z_max = z).
+be z_min = z and z_max = z).~~
 
 * ~~Initial position with weighted barycentre~~
 

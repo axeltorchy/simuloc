@@ -137,8 +137,6 @@ def print_stats(data, metadata, do_plot = True):
     None.
     """
     
-    print(metadata)
-    
     for simu_uid in data:
         simu_name = metadata[simu_uid]['simu_name']
         data[simu_uid]['res_pos'] = np.array(data[simu_uid]['res_pos'])
@@ -153,17 +151,18 @@ def print_stats(data, metadata, do_plot = True):
         print("")
         print(f"\t Simulation: {simu_name} (UID: {simu_uid})  -  {N_data} entries")
         print("")
-        print("* Method:           " , options['method'])
-        print("* Initial guess:    " , options['initial_pos'])
-        print("* Noise model:      " , options['noise_model'])
-        print("* Noise params:     " , options['noise_params'])
-        print("* Ranging distance: " , options['ranging_distance'])
-        print("* Anchor selection: " , options['anchor_selection'])
-        print("* Optimization:     " , options['optimization'])
-        print("* Bounds:           " , f"{bnds[0][0]} < x < {bnds[0][1]}" +
+        print("* Method:            " , options['method'])
+        print("* Initial guess:     " , options['initial_pos'])
+        print("* Plane constrained: " , options['plane_constrained'])
+        print("* Noise model:       " , options['noise_model'])
+        print("* Noise params:      " , options['noise_params'])
+        print("* Ranging distance:  " , options['ranging_distance'])
+        print("* Anchor selection:  " , options['anchor_selection'])
+        print("* Optimization:      " , options['optimization'])
+        print("* Bounds:            " , f"{bnds[0][0]} < x < {bnds[0][1]}" +
               f" , {bnds[1][0]} < y < {bnds[1][1]} , {bnds[2][0]} < z < {bnds[2][1]}")
-        print("* N anchors pre:    " , options['N_anchors_pre'])
-        print("* N anchors post:   " , options['N_anchors_post'])
+        print("* N anchors pre:     " , options['N_anchors_pre'])
+        print("* N anchors post:    " , options['N_anchors_post'])
         print("")
         
         # print(data[simu_uid]['res_pos'])
@@ -219,7 +218,7 @@ def print_stats(data, metadata, do_plot = True):
                 initial_guess = initial_guess / sum_weights
         
             else:
-                raise Exception("Initial guess method not supported.")
+                raise Exception(f"Initial guess method not supported (initial pos type = {options['initial_pos']['type']}.")
 
             init_guess_dist_3D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i]) - initial_guess) )
             init_guess_dist_2D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i][0:2]) - initial_guess[0:2]) )
@@ -286,7 +285,7 @@ def print_stats(data, metadata, do_plot = True):
     if do_plot:
         plt.figure(0)
         # Set axis limits on x axis (min and max error)
-        plt.xlim(0,2)
+        plt.xlim(0,5)
         plt.ylim(0,1)
         plt.xlabel("Absolute error in the 3D XYZ space ($m$)")
         plt.ylabel("Cumulative proportion")
@@ -295,7 +294,7 @@ def print_stats(data, metadata, do_plot = True):
             
         plt.figure(1)
         # Set axis limits on x axis (min and max error)
-        plt.xlim(0,2)
+        plt.xlim(0,5)
         plt.ylim(0,1)
         plt.xlabel("Absolute error in the 2D XY plane ($m$)")
         plt.ylabel("Cumulative proportion")

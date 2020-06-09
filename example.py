@@ -69,7 +69,7 @@ replace_file = False
 # The bounds are of the form: ((x_min, x_max), (y_min, y_max), (z_min, z_max))
 # To be in plane constrained mode, choose   z_min = z_max = constrained_alt
 # Tolerance should be small enough (no bigger than 1e-5)
-bnds = ((None, None), (None, None), (0.5, 3))
+bnds = [[None, None], [None, None], [0.5, 3]]
 tolerance = 1e-7
 
 # Name of the file where to save the anchors' location information
@@ -178,18 +178,29 @@ if __name__ == "__main__":
     #                          tag-anchor distances
     #   * 'weighted_bary_3D' : same as bary_3D but weighted...
     
+    # Possible options for options['plane_constrained']:
+    #   * "disabled" : will not constrain the altitude
+    #   * "auto" : will use the real Z coordinate of the tag as constrained
+    #              altitude
+    #   * "z" : will use the value of z (should be a float, otherwise it will
+    #           raise an exception) as the constrained altitude.
+    #           BEWARE: if the z_grid has multiple values, this constrained
+    #                   altitude will be the same for all z positions, which
+    #                   will inevitably trigger big errors on the final location
+    
     options = {
-        'method':   "UWB_TWR",
-        'initial_pos':      {'type': "bary_z0", 'initial_z': 0},
-        'noise_model':      noise_model,
-        'noise_params':     {"mu": mu_noise, "sigma": sigma_noise},
-        'anchor_selection': "nearest",
-        'optimization':     "basic",
-        'tolerance':        tolerance,
-        'bounds':           bnds,
-        'ranging_distance': ranging_dst,
-        'N_anchors_pre':    N_anchors_pre,
-        'N_anchors_post':   N_anchors_post
+        'method':            "UWB_TWR",
+        'initial_pos':       {'type': "bary_z0", 'initial_z': 0},
+        'plane_constrained': "disabled",
+        'noise_model':       noise_model,
+        'noise_params':      {"mu": mu_noise, "sigma": sigma_noise},
+        'anchor_selection':  "nearest",
+        'optimization':      "basic",
+        'tolerance':         tolerance,
+        'bounds':            bnds,
+        'ranging_distance':  ranging_dst,
+        'N_anchors_pre':     N_anchors_pre,
+        'N_anchors_post':    N_anchors_post
         }
 
     
@@ -212,6 +223,7 @@ if __name__ == "__main__":
     options = {
         'method':   "UWB_TWR",
         'initial_pos':      {'type': "bary_z0", 'initial_z': 0},
+        'plane_constrained': "disabled",
         'noise_model':      noise_model,
         'noise_params':     {"mu": mu_noise, "sigma": sigma_noise},
         'anchor_selection': "nearest",

@@ -446,7 +446,6 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     else:
                         pre_selected_anchors = anchors_ranging
                     
-                    bnds = options['bounds']
                     
                     # Anchor selection procedure
                     # It is done _before_ the ranging measurements, just like
@@ -526,7 +525,22 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     else:
                         raise Exception("Initial position option not supported.")
                     
-                    # print(initial_guess)
+                    
+                    if options['plane_constrained'] == "disabled":
+                        bnds = options['bounds']
+                    elif options['plane_constrained'] == "auto":
+                        bnds = options['bounds']
+                        
+                        bnds[2][0] = z
+                        bnds[2][1] = z
+                    else:
+                        try:
+                            bnds = options['bounds']
+                            bnds[2][0] = float(options['plane_constrained'])
+                            bnds[2][1] = float(options['plane_constrained'])
+                        except ValueError:
+                            raise Exception(f"Incorrect plane_constrained option: {options['plane_constrained']}.")
+                    
                     
                     if options['optimization'] == "basic":
                         res = minimize(cost_function2,
@@ -539,11 +553,7 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                                        options={'disp': False})
                     else:
                         raise Exception(f"Optimization option not supported: {options['optimization']}.")
-                    
-                    # print("===")
-                    # print(np.linalg.norm(np.array(initial_guess) - res.x))
-                    # print("===")
-                    
+                                        
                     # Store all the localization information in a dict to be
                     # dumped as a JSON object in the log file to generate the
                     # stats.

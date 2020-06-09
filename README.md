@@ -227,15 +227,15 @@ the `example.py` file.
 
 * Other random generations of anchor environments
 
-* Only use 2D instead of 3D covariance criterium when all the anchors are exactly
+* ~~Only use 2D instead of 3D covariance criterium when all the anchors are exactly
 at the same altitude (because the criterium will be zero for all configurations if
-that is the case, and thus become irrelevant)
+that is the case, and thus become irrelevant)~~
 
 * Add other noise models
 
-* Add other relevant statistics:
-  - mean/median tag-anchor distance
-  - mean/median distance between the final guess and the initial guess
+* ~~Add other relevant statistics:~~
+  - ~~mean/median tag-anchor distance~~
+  - ~~mean/median distance between the final guess and the initial guess~~
 
 * Add other ranging technologies (AoA...)
 
@@ -245,7 +245,7 @@ that is the case, and thus become irrelevant)
 so: the z-grid should be an array with only one value, and the bounds on z should
 be z_min = z and z_max = z).
 
-* Initial position with weighted barycentre
+* ~~Initial position with weighted barycentre~~
 
-* Add random initialization of anchors for the z coordinate with several
-random models
+* ~~Add random initialization of anchors for the z coordinate with several
+random models~~ (done for uniform distribution between z_min and z_max)

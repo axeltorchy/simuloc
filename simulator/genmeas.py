@@ -491,7 +491,7 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     
                     # Measurement generation
                     # It will add the measurements directly in the
-                    # post_selected_anchorsdict by adding another field.
+                    # post_selected_anchors dict by adding another field.
                     if options['method'] == "UWB_TWR":
                         generate_UWB_TWR(tag_pos, post_selected_anchors,
                                          options['noise_model'], options['noise_params'])
@@ -500,14 +500,29 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     
                     # Choice of the initial guess
                     if options['initial_pos']['type'] == "bary_z0":
-                        initial_guess = np.sum([[post_selected_anchors[i]['x'], post_selected_anchors[i]['y'], post_selected_anchors[i]['z']] for i in post_selected_anchors], axis=0)/len(post_selected_anchors)
+                        initial_guess = np.sum([[post_selected_anchors[a]['x'], post_selected_anchors[a]['y'], post_selected_anchors[a]['z']] for a in post_selected_anchors], axis=0)/len(post_selected_anchors)
                         initial_guess[2] = float(options['initial_pos']['initial_z'])
-                        
-                        
                     
-                    elif options['initial_pos']['type'] == "weighted_bary":
-                        #initial_guess = np.sum([[post_selected_anchors[i]['x'], post_selected_anchors[i]['y'], post_selected_anchors[i]['z']] for i in post_selected_anchors], axis=0)/len(post_selected_anchors)
-                        raise Exception("Not implemented yet.")
+                    elif options['initial_pos']['type'] == "bary_3D":
+                        initial_guess = np.sum([[post_selected_anchors[a]['x'], post_selected_anchors[a]['y'], post_selected_anchors[a]['z']] for a in post_selected_anchors], axis=0)/len(post_selected_anchors)
+                        
+                    elif options['initial_pos']['type'] == "weighted_bary_z0":
+                        initial_guess = np.zeros(3)
+                        sum_weights = 0
+                        for a in post_selected_anchors:
+                            initial_guess += 1./post_selected_anchors[a]['dst'] * np.array([post_selected_anchors[a]['x'], post_selected_anchors[a]['y'], post_selected_anchors[a]['z']])
+                            sum_weights += 1./post_selected_anchors[a]['dst']
+                        initial_guess = initial_guess / sum_weights
+                        initial_guess[2] = float(options['initial_pos']['initial_z'])
+                    
+                    elif options['initial_pos']['type'] == "weighted_bary_3D":
+                        initial_guess = np.zeros(3)
+                        sum_weights = 0
+                        for a in post_selected_anchors:
+                            initial_guess += 1./post_selected_anchors[a]['dst'] * np.array([post_selected_anchors[a]['x'], post_selected_anchors[a]['y'], post_selected_anchors[a]['z']])
+                            sum_weights += 1./post_selected_anchors[a]['dst']
+                        initial_guess = initial_guess / sum_weights
+                        
                     else:
                         raise Exception("Initial position option not supported.")
                     

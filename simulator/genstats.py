@@ -191,16 +191,39 @@ def print_stats(data, metadata, do_plot = True):
         init_guess_dist_2D = []
         for i in range(N_data):
             if options['initial_pos']['type'] == "bary_z0":
-                initial_guess = np.sum([[data[simu_uid]['post_selected_anchors'][i][a]['x'],
-                                         data[simu_uid]['post_selected_anchors'][i][a]['y'],
-                                         data[simu_uid]['post_selected_anchors'][i][a]['z']]
-                                        for a in data[simu_uid]['post_selected_anchors'][i]],
-                                        axis=0)/len(data[simu_uid]['post_selected_anchors'][i])
+                anc = data[simu_uid]['post_selected_anchors'][i]
+                initial_guess = np.sum([[anc[a]['x'], anc[a]['y'], anc[a]['z']] for a in anc], axis=0)/len(anc)
                 initial_guess[2] = float(options['initial_pos']['initial_z'])
-                init_guess_dist_3D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i]) - initial_guess) )
-                init_guess_dist_2D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i][0:2]) - initial_guess[0:2]) )
-                
+
+            elif options['initial_pos']['type'] == "bary_3D":
+                anc = data[simu_uid]['post_selected_anchors'][i]
+                initial_guess = np.sum([[anc[a]['x'], anc[a]['y'], anc[a]['z']] for a in anc], axis=0)/len(anc)
+                                      
+            elif options['initial_pos']['type'] == "weighted_bary_z0":
+                initial_guess = np.zeros(3)
+                sum_weights = 0
+                anc = data[simu_uid]['post_selected_anchors'][i]
+                for a in anc:
+                    initial_guess += 1./anc[a]['dst'] * np.array([anc[a]['x'], anc[a]['y'], anc[a]['z']])
+                    sum_weights += 1./anc[a]['dst']
+                initial_guess = initial_guess / sum_weights
+                initial_guess[2] = float(options['initial_pos']['initial_z'])
+                    
+            elif options['initial_pos']['type'] == "weighted_bary_3D":
+                initial_guess = np.zeros(3)
+                sum_weights = 0
+                anc = data[simu_uid]['post_selected_anchors'][i]
+                for a in anc:
+                    initial_guess += 1./anc[a]['dst'] * np.array([anc[a]['x'], anc[a]['y'], anc[a]['z']])
+                    sum_weights += 1./anc[a]['dst']
+                initial_guess = initial_guess / sum_weights
         
+            else:
+                raise Exception("Initial guess method not supported.")
+
+            init_guess_dist_3D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i]) - initial_guess) )
+            init_guess_dist_2D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i][0:2]) - initial_guess[0:2]) )
+
         # 3D errors (XYZ)
         MSE_3D = np.mean(squ_errors)
         MedSE_3D = np.median(squ_errors)
@@ -209,7 +232,7 @@ def print_stats(data, metadata, do_plot = True):
         minAE_3D = np.min(abs_errors)
         maxAE_3D = np.max(abs_errors)
         
-        # 3D errors (XYZ)
+        # 2D errors (XYZ)
         MSE_2D = np.mean(squ_errors_2D)
         MedSE_2D = np.median(squ_errors_2D)
         MAE_2D = np.mean(abs_errors_2D)
@@ -243,10 +266,10 @@ def print_stats(data, metadata, do_plot = True):
         
         print("")
         print("Distance between initial guess and final solution")
-        print(f"* Mean distance (2D):          {np.mean(init_guess_dist_3D) : .3f}")
-        print(f"* Median distance (2D):        {np.median(init_guess_dist_3D) : .3f}")
-        print(f"* Mean distance (3D):          {np.mean(init_guess_dist_2D) : .3f}")
-        print(f"* Median distance (3D):        {np.median(init_guess_dist_2D) : .3f}")
+        print(f"* Mean distance (3D):          {np.mean(init_guess_dist_3D) : .3f}")
+        print(f"* Median distance (3D):        {np.median(init_guess_dist_3D) : .3f}")
+        print(f"* Mean distance (2D):          {np.mean(init_guess_dist_2D) : .3f}")
+        print(f"* Median distance (2D):        {np.median(init_guess_dist_2D) : .3f}")
         
         print("")
         

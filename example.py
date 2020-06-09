@@ -171,6 +171,13 @@ if __name__ == "__main__":
     # First simulation :
     simu_name = "low noise"
     
+    # Possible options for options['initial_pos']['type']:
+    #   * 'bary_z0' : barycenter but init. z = options['initial_pos']['initial_z']
+    #   * 'bary_3D' : barycenter on all 3 coordinates
+    #   * 'weighted_bary_z0' : same as bary_z0 but weighted with inverses of
+    #                          tag-anchor distances
+    #   * 'weighted_bary_3D' : same as bary_3D but weighted...
+    
     options = {
         'method':   "UWB_TWR",
         'initial_pos':      {'type': "bary_z0", 'initial_z': 0},

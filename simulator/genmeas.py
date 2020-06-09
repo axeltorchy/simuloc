@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+"""genmeas module
 Measurement and localization / optimization module
 
 Provide functions to generate noisy measurements for several technologies and
 save the results to a text file to be used to produce statistics.
 
 
-__author__ = "Axel Torchy"
-__copyright__ = "Copyright 2020, Wizzilab"
-__credits__ = ["Axel Torchy", "Wizzilab"]
-__version__ = "1.0"
-__maintainer__ = "Axel Torchy"
-__email__ = "axel@wizzilab.com"
-__status__ = "Production"
-
+Author:         "Axel Torchy"
+Copyright:      "Copyright 2020, Wizzilab"
+Credits:        ["Axel Torchy", "Wizzilab"]
+Version:        "1.0"
+Email:          "axel@wizzilab.com"
+Status:         "Production"
 """
 
-from typing import Union, Sequence, Dict
 import numpy as np
 import json
 from scipy.optimize import minimize
-from random import sample, seed
+from random import sample
 from itertools import combinations
 from heapq import nsmallest 
 

@@ -239,5 +239,6 @@ that is the case, and thus become irrelevant)
 
 * Add other ranging technologies (AoA...)
 
+* Add possibility to use a random seed for the reproducibility of simulations
  
  

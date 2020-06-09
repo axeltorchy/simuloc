@@ -459,12 +459,16 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     if options['initial_pos']['type'] == "bary_z0":
                         initial_guess = np.sum([[post_selected_anchors[i]['x'], post_selected_anchors[i]['y'], post_selected_anchors[i]['z']] for i in post_selected_anchors], axis=0)/len(post_selected_anchors)
                         initial_guess[2] = float(options['initial_pos']['initial_z'])
+                        
+                        
                     
                     elif options['initial_pos']['type'] == "weighted_bary":
-                        initial_guess = np.sum([[post_selected_anchors[i]['x'], post_selected_anchors[i]['y'], post_selected_anchors[i]['z']] for i in post_selected_anchors], axis=0)/len(post_selected_anchors)
+                        #initial_guess = np.sum([[post_selected_anchors[i]['x'], post_selected_anchors[i]['y'], post_selected_anchors[i]['z']] for i in post_selected_anchors], axis=0)/len(post_selected_anchors)
+                        raise Exception("Not implemented yet.")
                     else:
                         raise Exception("Initial position option not supported.")
-                        
+                    
+                    # print(initial_guess)
                     
                     if options['optimization'] == "basic":
                         res = minimize(cost_function,
@@ -477,6 +481,10 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                                        options={'disp': False})
                     else:
                         raise Exception(f"Optimization option not supported: {options['optimization']}.")
+                    
+                    # print("===")
+                    # print(np.linalg.norm(np.array(initial_guess) - res.x))
+                    # print("===")
                     
                     # Store all the localization information in a dict to be
                     # dumped as a JSON object in the log file to generate the

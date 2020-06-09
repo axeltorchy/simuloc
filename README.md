@@ -240,5 +240,12 @@ that is the case, and thus become irrelevant)
 * Add other ranging technologies (AoA...)
 
 * Add possibility to use a random seed for the reproducibility of simulations
- 
- 
+
+* Add explicit support for plane-constrained mode (now it is possible, but to do
+so: the z-grid should be an array with only one value, and the bounds on z should
+be z_min = z and z_max = z).
+
+* Initial position with weighted barycentre
+
+* Add random initialization of anchors for the z coordinate with several
+random models

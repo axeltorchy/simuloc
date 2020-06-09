@@ -6,6 +6,6 @@ Created on Tue Jun  9 10:41:46 2020
 @author: axel
 """
 
-import genenv
-import genmeas
-import genstats
+import simulator.genenv
+import simulator.genmeas
+import simulator.genstats

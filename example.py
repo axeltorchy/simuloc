@@ -6,24 +6,17 @@ Example script
 Provide a full running example on how to use the localization simulator.
 
 
-__author__ = "Axel Torchy"
-__copyright__ = "Copyright 2020, Wizzilab"
-__credits__ = ["Axel Torchy", "Wizzilab"]
-__license__ = ""
-__version__ = "1.0"
-__maintainer__ = "Axel Torchy"
-__email__ = "axel@wizzilab.com"
-__status__ = "Production"
+Author:         "Axel Torchy"
+Copyright:      "Copyright 2020, Wizzilab"
+Credits:        ["Axel Torchy", "Wizzilab"]
+Version:        "1.0"
+Email:          "axel@wizzilab.com"
+Status:         "Production"
 """
 
 # Simulator imports
-import genenv
-import genmeas
-import genstats
+from simulator import genenv, genmeas, genstats
 
-
-from typing import Union, Sequence, Dict
-import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -50,7 +43,7 @@ step = 2
 N_tries = 3
 
 # Noise parameters, in meters
-mu_noise = 0.08
+mu_noise = 0.05
 sigma_noise = 0.15
 noise_model = "gaussian"
 
@@ -58,7 +51,7 @@ noise_model = "gaussian"
 ranging_dst = 30
 
 # Name of the file to which the localization results will be saved
-filename = "loc2.json"
+filename = "localization_log.json"
 # If replace_file is True, each simulation will overwrite the previous results.
 # Keep it to False to superimpose the results of several settings.
 
@@ -68,7 +61,7 @@ filename = "loc2.json"
 N_anchors_pre = 8
 
 # Number of anchors post-ranging. 
-N_anchors_post = 5
+N_anchors_post = 6
 
 replace_file = False
 
@@ -76,33 +69,33 @@ replace_file = False
 # The bounds are of the form: ((x_min, x_max), (y_min, y_max), (z_min, z_max))
 # To be in plane constrained mode, choose   z_min = z_max = constrained_alt
 # Tolerance should be small enough (no bigger than 1e-5)
-bnds = ((None, None), (None, None), (None, None))
+bnds = ((None, None), (None, None), (0.5, 3))
 tolerance = 1e-7
 
 # Name of the file where to save the anchors' location information
 anchors_filename = "anchors_dump.json"
 
 anchors_list = [
-    [0 ,5.12, 3],       # 0
-    [0, 10, 3],         # 1
+    [0 ,5.12, 2],       # 0
+    [0, 10, 2.5],         # 1
     [0, 25.31, 3],      # 2
-    [7.35, 10, 3],      # 3
-    [7.2, 25.31, 3],    # 4
-    [7.35, 5.12, 3],    # 5
-    [10.08, 25.31, 3],  # 6
-    [21, 25.31, 3],     # 7
+    [7.35, 10, 2],      # 3
+    [7.2, 25.31, 2],    # 4
+    [7.35, 5.12, 3.5],    # 5
+    [10.08, 25.31, 2],  # 6
+    [21, 25.31, 4],     # 7
     [24.2, 21, 3],      # 8
-    [10.5, 5.12, 3],    # 9
-    [19, 5.12, 3],      # 10
-    [24, 6.9, 3],       # 11
-    [27.5, 17, 3],      # 12
-    [30.7, 11.9, 3],    # 13
-    [14.9, 14.4, 3],    # 14
-    [21.6, 13.9, 3],    # 15
-    [0, 21, 3],         # 16
-    [7.2, 21, 3],       # 17
+    [10.5, 5.12, 2],    # 9
+    [19, 5.12, 3.5],      # 10
+    [24, 6.9, 2],       # 11
+    [27.5, 17, 1.5],      # 12
+    [30.7, 11.9, 3.5],    # 13
+    [14.9, 14.4, 4],    # 14
+    [21.6, 13.9, 2],    # 15
+    [0, 21, 3.5],         # 16
+    [7.2, 21, 2],       # 17
     [0, 15.5, 3],       # 18
-    [7.2, 15.5, 3]      # 19
+    [7.2, 15.5, 3.5]      # 19
     ]
 
 
@@ -171,6 +164,7 @@ if __name__ == "__main__":
     
     # First simulation :
     simu_name = "low noise"
+    
     options = {
         'method':   "UWB_TWR",
         'initial_pos':      {'type': "bary_z0", 'initial_z': 0},

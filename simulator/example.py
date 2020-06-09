@@ -16,23 +16,35 @@ __email__ = "axel@wizzilab.com"
 __status__ = "Production"
 """
 
+# Simulator imports
+import genenv
+import genmeas
+import genstats
+
 
 from typing import Union, Sequence, Dict
 import json
 import numpy as np
-import genenv
-import genmeas
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 
 
+# Improves quality of the graphs
+
+rcParams['figure.dpi'] = 150
+size_factor = 1.2
+rcParams['figure.figsize'] = [size_factor * 8.0, size_factor * 6.0]
+rcParams['lines.markersize'] = 6.0 
 
 # %% Simulation parameters
+
+do_plot = True
 
 # Grid bounds
 x_min, x_max = 1, 30
 y_min, y_max = 1, 20
 z_min, z_max = 0.5, 3
-step = 1
+step = 2
 
 # Number of tries for each grid position
 N_tries = 3
@@ -46,7 +58,7 @@ noise_model = "gaussian"
 ranging_dst = 30
 
 # Name of the file to which the localization results will be saved
-filename = "loc.json"
+filename = "loc2.json"
 # If replace_file is True, each simulation will overwrite the previous results.
 # Keep it to False to superimpose the results of several settings.
 
@@ -152,7 +164,13 @@ if __name__ == "__main__":
     
     # Several simulations can be run successively in order to compare the
     # performance of the localization with different parameters.
-        
+    
+    # Remember to specify "simu_name" in order to be able to differenciate
+    # different simulations that are going to be plotted on the same graph.
+    
+    
+    # First simulation :
+    simu_name = "low noise"
     options = {
         'method':   "UWB_TWR",
         'initial_pos':      {'type': "bary_z0", 'initial_z': 0},
@@ -169,16 +187,19 @@ if __name__ == "__main__":
 
     
     genmeas.locate_grid(filename,
-                   replace_file,
-                   anchors,
-                   x_grid,
-                   y_grid,
-                   z_grid,
-                   N_tries,
-                   options
-                   )
+                        simu_name,
+                        replace_file,
+                        anchors,
+                        x_grid,
+                        y_grid,
+                        z_grid,
+                        N_tries,
+                        options
+                        )
     
+    # Second simulation :
     # Another simulation with increased noise to compare the performance.
+    simu_name = "high noise"
     
     sigma_noise = 2. * sigma_noise
     options = {
@@ -197,14 +218,20 @@ if __name__ == "__main__":
 
     
     genmeas.locate_grid(filename,
-                   replace_file,
-                   anchors,
-                   x_grid,
-                   y_grid,
-                   z_grid,
-                   N_tries,
-                   options
-                   )
+                        simu_name,
+                        replace_file,
+                        anchors,
+                        x_grid,
+                        y_grid,
+                        z_grid,
+                        N_tries,
+                        options
+                        )
+    
+    
+    data, metadata = genstats.read_log_file(filename)
+    genstats.print_stats(data, metadata, do_plot)
+    
     
     
     

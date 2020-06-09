@@ -327,7 +327,7 @@ def generate_UWB_TWR(tag_pos, anchors, noise_model, noise_params):
     
     return
 
-def locate_grid(filename: str, replace_file: bool, anchors: dict,
+def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict,
                 x_grid: np.ndarray, y_grid: np.ndarray, z_grid: np.ndarray,
                 N_tries: int, options: dict) -> None:
     """
@@ -340,6 +340,8 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
     Parameters
     ----------
     filename : name of the file to save the localization results
+    simu_name : simulation name, used by the statistics module to distinguish
+            simulations that are plotted on the same graphs
     replace_file : if True, the file will be replaced every time this function
         is called. If False, it will append the results to the existing file
         (if it already exists, otherwise will create a new one)
@@ -366,6 +368,7 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
         options_outfile = open("options_" + filename, open_mode)
         to_write = {}
         to_write['simu_uid'] = simu_uid
+        to_write['simu_name'] = simu_name
         to_write['options'] = options
         to_write['anchors'] = anchors
         to_write['x_grid'] = x_grid.tolist()
@@ -373,15 +376,19 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
         to_write['z_grid'] = z_grid.tolist()
         to_write['N_tries'] = N_tries
         json.dump(to_write, options_outfile)
+        options_outfile.write('\n')
         options_outfile.close()
     except:
         raise Exception(f"An error occured when opening file {outfile}.")
     
     N_tot_steps = len(x_grid) * len(y_grid) * len(z_grid) * N_tries
-    print(N_tot_steps)
+    
     step_count = 0
     
     result = {}
+    
+    print("="*80)
+    print(f"== Starting localization on grid - simulation: {simu_name}")
     
     for i in range(len(x_grid)):
         for j in range(len(y_grid)):
@@ -414,8 +421,8 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
                         
                         ID = np.random.choice(IDs_anchors_ranging, N_anchors_pre, replace=False,
                                               p=(1./distances) / sum(1./distances))
-                        for i in ID:
-                            pre_selected_anchors[int(i)] = anchors_ranging[i]
+                        for ii in ID:
+                            pre_selected_anchors[int(ii)] = anchors_ranging[ii]
                     else:
                         pre_selected_anchors = anchors_ranging
                     
@@ -500,5 +507,8 @@ def locate_grid(filename: str, replace_file: bool, anchors: dict,
                     json.dump(result, outfile)
                     outfile.write('\n')
         
-    outfile.close()          
+    outfile.close()  
+
+    print("Done.")
+    return        
                     

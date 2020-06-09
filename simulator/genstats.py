@@ -176,7 +176,17 @@ def print_stats(data, metadata, do_plot = True):
         
         abs_errors_2D = np.linalg.norm(data[simu_uid]['res_pos'][:, 0:2] - data[simu_uid]['tag_pos'][:, 0:2], axis=1)
         squ_errors_2D = abs_errors_2D ** 2
-                
+        
+        
+        # Mean measured tag-anchor distance
+        TA_dist = []
+        for i in range(N_data):
+            for a in data[simu_uid]['post_selected_anchors'][i]:
+                TA_dist.append(data[simu_uid]['post_selected_anchors'][i][a]['dst'])
+        
+        mean_TA_dist = np.mean(TA_dist)
+        median_TA_dist = np.median(TA_dist)
+            
         
         # 3D errors (XYZ)
         MSE_3D = np.mean(squ_errors)
@@ -194,6 +204,11 @@ def print_stats(data, metadata, do_plot = True):
         minAE_2D = np.min(abs_errors_2D)
         maxAE_2D = np.max(abs_errors_2D)
         
+        print("Tag-anchor distances:")
+        print(f"* Mean tag-anchor distance:    {mean_TA_dist : .3f}")
+        print(f"* Median tag-anchor distance:  {median_TA_dist : .3f}")
+        
+        print("")
         print("Errors in 3D (XYZ coordinates):")
         
         print(f"* Mean Squared Error (MSE):    {MSE_3D : .3f}")

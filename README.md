@@ -1,2 +1,244 @@
-# simuloc
-Simulate a warehouse environment and evaluate the performance of anchor selection procedures on tag localization.
+# Wizzilab Localization Simulator
+
+## Introduction
+
+This Python-based simulator aims at providing an interface to evaluate
+the performance of different localization algorithms with varying
+parameters.
+
+The simulator is stratified in several modules related to:
+* Environment generation: anchor positions (in a local 3D coordinate system)
+* Measurement technology & noise model (ToF, AoA...)
+* Anchor selection procedure (see details below) for power consuption issues
+* Geolocalization algorithm / Minimization cost function
+* Visualization and statistics
+
+Of course, the cost function as well as the noise model will depend on
+the choice of the technology.
+
+The simulator's goal is not to provide real time display of the localization
+results, but to give information (statistics and diagrams) making it easier
+to compare the performance of various localization procedures and
+technologies in a given environment.
+
+The organization in modules enables the user to customize it and to easily
+change only some blocks of the whole procedure.
+
+
+The user might want to compare (simultaneously or not) the influence of several
+factors. Of course, it is not always realistic to compare the performance of two
+completely different settings. Instead, one might prefer observing the influence
+of a change in individual parameters to understand their impact on the result.
+
+Thus, the chosen solution to be able to observe simultaneously the results is
+to run several simulations, save the results in the same file and feed the final
+result to the visualization module.
+
+When reading the log file, the visualization module will detect all the
+different configurations and superimpose the results on the same graphs.
+
+Improvements could be adopted in future versions to deal with this issue. For
+example, the user might want to analyse the performance of two different cost
+functions, with 4 different models of noise for each cost function. The best
+visualisation would then probably be four colors for the four models of noise,
+plain lines for the first cost function and dashed lines for the second one.
+
+
+## General description of the API / blocks
+
+The only requirement is to observe the same API between consecutive blocks:
+
+#### BLOCK 1:  Environment generation  
+  This block must generate a dictionary of anchors containing three fields `'x'`,
+`'y'` and '`z`' with unique IDs. It can be generated from an array of coordinates,
+a text file, manual input, etc.  
+  The `anchors` Python dictionary is given to the second block as an input.  
+  This block also provides a grid of 3D locations (_i.e._ tag positions) where the
+localization performance will be evaluated, as well as the number of tries for
+each of these positions.  
+  From now on, the anchor positions are fixed. However, the measurements will
+have to include some randomness and thus will be re-generated for each try at
+each of the above mentioned positions of the grid.
+
+
+#### BLOCK 2:  Measurement generation & geolocalization
+  This block is called at each try and each position of the above mentioned grid.  
+  Depending on the technology, it will generate different kinds of measurements.  
+  Thus, the localization algorithm to be called afterwards will depend on the
+measurement type.
+
+  For now, **only the Time of Flight (UWB-TWR= distance measurements** are
+supported.
+A multilateration algorithm will then be called to compute the location of the
+device.
+
+A noise model and parameters have to be chosen. Indeed, one might want to
+evaluate the robustness of the localization algorithm under varying noise
+conditions. For example:
+* Gaussian noise with expectancy $\mu$ and standard deviation $\sigma$
+* Gaussian noise with parameters depending on the tag-anchor distance
+* Fading/shadowing which can modelize temporary obstruction of the physical
+channel
+
+The measurements are then generated depending on an _a priori_ anchor
+selection procedure which takes into account:
+* the ranging distance
+* the number of anchors to be selected
+* the geometry of the anchors' disposition
+
+Finally, the geolocalization algorithm is executed using the set of selected
+anchor positions and measurements.
+
+This block saves the results of all the localizations in a file containing
+**multiple JSON objects, more precisely one JSON object per line**.
+It includes all the relevant information for the statistics for each
+recording:
+- initial position
+- real tag position
+- inferred tag position
+- anchor selection method
+- localization method: minimization cost function + precision / LS / NLS
+- noise model
+- selected anchors and ranging measurements
+
+The file can get pretty big (several tens of megabytes) but saving it will
+save a lot of time if visualizing the results or comparing the results of
+several simulations is needed later on.
+
+
+#### BLOCK 3: Visualization and statistics
+
+This block simply reads the file generated by the second block and produces
+readable textual statistics and plots graphs to analyse the performance of the
+different localization methods.
+* Summary of the simulation parameters
+* Mean squared error / Mean absolute error
+* Median squared error / Median absolute error
+* Cumulative Distribution Function
+* Maximum and minimum error
+* Mean tag-anchor distances
+* Histogram of z positions (useful to observe some phenomenons given that
+the precision on the z axis is known to be much less accurate due to the
+lack of variability of the anchors' positions on the vertical axis).
+ 
+
+
+## Usage
+
+### Description of the data structures
+
+The simulator requires Python 3.5 or above as it incorporates type hinting,
+_i.e._ the arguments and return types of functions are explicitly specified. 
+
+In addition to that, all functions are documented so that their action,
+arguments and return objects are fully described and leave no ambiguity.
+
+It was also decided to use dictionaries as much as possible. Dictionaries
+(Python type: `dict`) are associative arrays, _i.e._ key-indexed unordered
+collections. All anchor sets are stored as dictionaries. These latter are
+passed as function arguments by reference, which means that they can be
+modified by the function itself. It is useful as it means that we can
+keep the same dict of anchors and include the distances in the original
+dictionary and replace a single value every time a new ranging is done without
+creating a new dictionary.
+
+An anchor set is a `dict` or `dict`. Here is an example with `n` anchors:
+```
+anchors = {
+  ID_A1: { 'x': x_A1,
+           'y': y_A1,
+           'z': z_A1 },
+  ID_A2: { 'x': x_A2,
+           'y': y_A2,
+           'z': z_A2 },
+  ...
+  ID_An: { 'x': x_An,
+           'y': y_An,
+           'z': z_An }
+}
+```
+
+
+
+
+### Imports and usage
+
+The three modules `genenv`, `genmeas` and `genstats` must be imported
+in the main script.
+
+There are several ways to create an localization environment i.e. a set of
+anchors to be fed as an input to the next blocks. It can be done manually by
+creating a dictionary following the above described structure. However, the
+`genenv` module provides three ways of doing so:
+
+1. `generate_anchors_from_list` takes a $N \times 3$ coordinate array as an
+input and generates the anchors dict.
+2. `generate_anchors_from_json_file` takes a JSON dump of the anchors dict
+as an input. This file can be generated with the `save_anchors_to_json_file`
+function.
+3. `generate_manual_anchors` prompts the user for manual input of the
+anchors coordinates. Can be useful to generate an environment and then save
+it to a JSON file using the `save_anchors_to_json_file`.
+4. `generate_uniform_anchors` generates a set of N anchors randomly placed
+in a 3D box which bounds are specified, following a uniform distribution.
+
+
+An example script is provided in `example1.py` to show the order in which
+to call the functions from the different modules.
+
+
+
+Then, a 3D grid should be created. `genenv.generate_grid` returns the
+required grid by specifying X, Y, Z bounds and a grid step. Note that
+for now, only cuboid spaces are supported.
+
+An `options` dict should be created and the `genmeas.locate_grid` function
+should should be called. It will create a log file with the specied file
+name and save all the localization results in this latter.
+
+Several simulations (_i.e._ several calls to the `locate_grid` function) can
+be made successively in order to compare the results on the same graph.
+
+Finally, the statistics module function `genstats.print_stats` should be
+called after the log file is being parsed by the `genstats.read_log_file`
+function:
+
+```
+data, metadata = genstats.read_log_file(filename)
+genstats.print_stats(data, metadata, do_plot)
+```
+
+
+We highly encourage the user to refer to the complete example provided in
+the `example.py` file.
+
+
+
+
+
+## TODO / Other aspects to study
+
+* Successive localizations with z correction ?
+  1. First localization
+  2. Keep X and Y, compute Z as the weighted average as explained earlier to Yordan
+  3. Fix Z to this new value and optimize on XY in plane constrained mode
+  4. Go back to step 2 several times
+
+
+* Other random generations of anchor environments
+
+* Only use 2D instead of 3D covariance criterium when all the anchors are exactly
+at the same altitude (because the criterium will be zero for all configurations if
+that is the case, and thus become irrelevant)
+
+* Add other noise models
+
+* Add other relevant statistics:
+  - mean/median tag-anchor distance
+  - mean/median distance between the final guess and the initial guess
+
+* Add other ranging technologies (AoA...)
+
+* Add possibility to use a random seed for the reproducibility of simulations
+ 
+ 

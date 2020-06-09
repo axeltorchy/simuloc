@@ -543,7 +543,7 @@ def locate_grid(filename: str, simu_name: str, replace_file: bool, anchors: dict
                     
                     
                     if options['optimization'] == "basic":
-                        res = minimize(cost_function2,
+                        res = minimize(cost_function,
                                        initial_guess,
                                        args=(post_selected_anchors, 0),
                                        method='L-BFGS-B',

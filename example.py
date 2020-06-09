@@ -104,6 +104,12 @@ if __name__ == "__main__":
     # %% BLOCK 1: environment generation
     print("Generating environment.")
     anchors = genenv.generate_anchors_from_list(anchors_list)
+    
+    # # If more variability is wanted on the altitudes of the anchors.
+    # # It should improve the results of the final localization, especially on
+    # # the z coordinate.
+    # genenv.random_z_coordinate(anchors, z_min = 0., z_max = 6)
+    
     for a in anchors:
         print(f"== Anchor {a}: \t{anchors[a]}")
     

@@ -186,7 +186,20 @@ def print_stats(data, metadata, do_plot = True):
         
         mean_TA_dist = np.mean(TA_dist)
         median_TA_dist = np.median(TA_dist)
-            
+        
+        init_guess_dist_3D = []
+        init_guess_dist_2D = []
+        for i in range(N_data):
+            if options['initial_pos']['type'] == "bary_z0":
+                initial_guess = np.sum([[data[simu_uid]['post_selected_anchors'][i][a]['x'],
+                                         data[simu_uid]['post_selected_anchors'][i][a]['y'],
+                                         data[simu_uid]['post_selected_anchors'][i][a]['z']]
+                                        for a in data[simu_uid]['post_selected_anchors'][i]],
+                                        axis=0)/len(data[simu_uid]['post_selected_anchors'][i])
+                initial_guess[2] = float(options['initial_pos']['initial_z'])
+                init_guess_dist_3D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i]) - initial_guess) )
+                init_guess_dist_2D.append( np.linalg.norm(np.array(data[simu_uid]['res_pos'][i][0:2]) - initial_guess[0:2]) )
+                
         
         # 3D errors (XYZ)
         MSE_3D = np.mean(squ_errors)
@@ -204,11 +217,7 @@ def print_stats(data, metadata, do_plot = True):
         minAE_2D = np.min(abs_errors_2D)
         maxAE_2D = np.max(abs_errors_2D)
         
-        print("Tag-anchor distances:")
-        print(f"* Mean tag-anchor distance:    {mean_TA_dist : .3f}")
-        print(f"* Median tag-anchor distance:  {median_TA_dist : .3f}")
-        
-        print("")
+
         print("Errors in 3D (XYZ coordinates):")
         
         print(f"* Mean Squared Error (MSE):    {MSE_3D : .3f}")
@@ -217,6 +226,7 @@ def print_stats(data, metadata, do_plot = True):
         print(f"* Median Absolute Error:       {MedAE_3D : .3f}")
         print(f"* Min Absolute Error:          {minAE_3D : .3f}")
         print(f"* Max Absolute Error:          {maxAE_3D : .3f}")
+        
         print("")
         print("Errors in 2D (XY coordinates):")
         print(f"* Mean Squared Error (MSE):    {MSE_2D : .3f}")
@@ -225,6 +235,19 @@ def print_stats(data, metadata, do_plot = True):
         print(f"* Median Absolute Error:       {MedAE_2D : .3f}")
         print(f"* Min Absolute Error:          {minAE_2D : .3f}")
         print(f"* Max Absolute Error:          {maxAE_2D : .3f}")
+        
+        print("")
+        print("Tag-anchor distances:")
+        print(f"* Mean tag-anchor distance:    {mean_TA_dist : .3f}")
+        print(f"* Median tag-anchor distance:  {median_TA_dist : .3f}")
+        
+        print("")
+        print("Distance between initial guess and final solution")
+        print(f"* Mean distance (2D):          {np.mean(init_guess_dist_3D) : .3f}")
+        print(f"* Median distance (2D):        {np.median(init_guess_dist_3D) : .3f}")
+        print(f"* Mean distance (3D):          {np.mean(init_guess_dist_2D) : .3f}")
+        print(f"* Median distance (3D):        {np.median(init_guess_dist_2D) : .3f}")
+        
         print("")
         
         if do_plot:
